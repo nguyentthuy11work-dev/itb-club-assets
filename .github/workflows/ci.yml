@@ -87,7 +87,30 @@ jobs:
 
       - name: Test backend
         working-directory: backend
-        run: uv run pytest
+        run: uv run pytest --junitxml=test-results.xml
+
+      - name: Annotate backend test failures
+        if: failure()
+        working-directory: backend
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from xml.etree import ElementTree
+
+          report = Path("test-results.xml")
+          if report.exists():
+              root = ElementTree.parse(report).getroot()
+              for case in root.iter("testcase"):
+                  problem = case.find("failure")
+                  if problem is None:
+                      problem = case.find("error")
+                  if problem is None:
+                      continue
+                  name = f"{case.get('classname', 'pytest')}.{case.get('name', 'test')}"
+                  message = (problem.text or problem.get("message") or "Test failed").strip()
+                  escaped = message[:4000].replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+                  print(f"::error title={name}::{escaped}")
+          PY
 
       - name: Enforce Domain/Application coverage
         working-directory: backend
