@@ -42,7 +42,7 @@ Run before opening a pull request:
 
 ```bash
 cd backend
-uv sync --frozen
+uv sync --frozen --extra dev
 uv run black --check src tests
 uv run ruff check src tests
 uv run mypy src tests
