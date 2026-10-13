@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: ams
+          POSTGRES_USER: ams_app
+          POSTGRES_PASSWORD: ams_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ams_app -d ams"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      AMS_DATABASE_URL: postgresql+asyncpg://ams_app:ams_ci@localhost:5432/ams
+      AMS_JWT_SECRET: ci-only-secret-with-at-least-thirty-two-bytes
+      AMS_JWT_ISSUER: ams-api
+      AMS_JWT_AUDIENCE: ams-web
+      AMS_REFRESH_COOKIE_SECURE: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv sync --frozen
+
+      - name: Migrate database
+        run: >-
+          docker run --rm --network host
+          -v "$PWD/backend/migrations:/flyway/sql:ro"
+          flyway/flyway:13.7.0-alpine
+          -url=jdbc:postgresql://localhost:5432/ams
+          -user=ams_app
+          -password=ams_ci
+          -locations=filesystem:/flyway/sql
+          migrate
+
+      - name: Static analysis
+        working-directory: backend
+        run: |
+          uv run black --check src tests
+          uv run ruff check src tests
+          uv run mypy src tests
+
+      - name: Test backend
+        working-directory: backend
+        run: uv run pytest
+
+      - name: Enforce Domain/Application coverage
+        working-directory: backend
+        run: >-
+          uv run pytest tests/unit tests/api
+          --cov=src/ams/domain
+          --cov=src/ams/application
+          --cov-report=term-missing
+          --cov-fail-under=100
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Test and build frontend
+        working-directory: frontend
+        run: |
+          npm test
+          npm run build
+          npm audit
+
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose
+        run: docker compose config --quiet
+      - name: Build application images
+        run: docker compose build

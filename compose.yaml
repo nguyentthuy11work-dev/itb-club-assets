@@ -1,0 +1,86 @@
+name: ams
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ams}
+      POSTGRES_USER: ${POSTGRES_USER:-ams_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ams_app_local}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+
+  migrate:
+    image: flyway/flyway:13.7.0-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-ams}
+      FLYWAY_USER: ${POSTGRES_USER:-ams_app}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-ams_app_local}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_CONNECT_RETRIES: 60
+    volumes:
+      - ./backend/migrations:/flyway/sql:ro
+    command: migrate
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      AMS_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-ams_app}:${POSTGRES_PASSWORD:-ams_app_local}@postgres:5432/${POSTGRES_DB:-ams}
+      AMS_JWT_SECRET: ${AMS_JWT_SECRET:-local-development-secret-change-before-production-2026}
+      AMS_JWT_ISSUER: ${AMS_JWT_ISSUER:-ams-api}
+      AMS_JWT_AUDIENCE: ${AMS_JWT_AUDIENCE:-ams-web}
+      AMS_ACCESS_TOKEN_MINUTES: ${AMS_ACCESS_TOKEN_MINUTES:-15}
+      AMS_REFRESH_TOKEN_DAYS: ${AMS_REFRESH_TOKEN_DAYS:-7}
+      AMS_REFRESH_COOKIE_SECURE: "false"
+      AMS_CORS_ALLOWED_ORIGINS: '["http://localhost:${WEB_PORT:-5173}"]'
+      AMS_EVIDENCE_STORAGE_ROOT: /data/evidence
+      AMS_LOG_LEVEL: ${AMS_LOG_LEVEL:-INFO}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - evidence_data:/data/evidence
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_USE_MOCK: ${VITE_USE_MOCK:-true}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api/v1}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-5173}:80"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  evidence_data:

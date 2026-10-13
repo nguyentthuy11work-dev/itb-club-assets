@@ -1,0 +1,68 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+*.crt
+
+# Internal analysis, planning and imported reference material
+/ba/
+/template/
+/testing/
+/backend/*.md
+!/backend/README.md
+/backend/publish_f00_01_workbook.py
+/frontend/README.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Node / Vite
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Runtime data and private evidence
+.private/
+data/
+uploads/
+*.sqlite
+*.sqlite3
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.bkp
+*.swp
+*~
+
+# IDE and operating system
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Test and tool artifacts
+.tox/
+.nox/
+.hypothesis/
+.cache/
+playwright-report/
+test-results/
