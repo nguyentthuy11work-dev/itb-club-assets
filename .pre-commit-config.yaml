@@ -17,7 +17,7 @@ repos:
       - id: trailing-whitespace
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 2eeb5678de71a00c0902cbda7105d328432f72cb # v0.16.8
+    rev: 44b5042edab9382aba712eed4f9c7bab7a3d6a3e # v0.17.0
     hooks:
       - id: ruff-check
         args: [--config=backend/pyproject.toml]
