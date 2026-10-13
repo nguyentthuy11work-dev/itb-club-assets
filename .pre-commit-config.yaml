@@ -24,7 +24,7 @@ repos:
         files: ^backend/(src|tests)/.*\.py$
 
   - repo: https://github.com/psf/black
-    rev: 782e5605c86aab56be6f905da10dcd3e463fd9c2 # 25.12.0
+    rev: 258e7dbf348bc23cb70b8cdf693481c04634ebcc # 26.10.1
     hooks:
       - id: black
         args: [--config=backend/pyproject.toml]
