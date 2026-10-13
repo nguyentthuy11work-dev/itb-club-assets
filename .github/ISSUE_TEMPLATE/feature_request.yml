@@ -1,0 +1,40 @@
+name: Feature request
+description: Propose a focused product or engineering improvement
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    attributes:
+      label: Problem
+      description: What user or operational problem should be solved?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Proposed outcome
+      description: Describe the desired behavior without prescribing unnecessary implementation details.
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Primary user
+      options:
+        - Member
+        - HR
+        - Treasurer
+        - Team lead
+        - Operator or maintainer
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Additional context
+      description: Add mockups, constraints or alternatives considered.

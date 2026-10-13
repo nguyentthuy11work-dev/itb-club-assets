@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a reproducible problem in ITB Club Assets
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Never include passwords, tokens, personal data or private evidence.
+  - type: checkboxes
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I searched existing issues for duplicates.
+          required: true
+        - label: I removed secrets and private data from this report.
+          required: true
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Start the stack with ...
+        2. Open ...
+        3. Select ...
+        4. Observe ...
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Area
+      options:
+        - Frontend
+        - Backend API
+        - Database or migrations
+        - Docker or CI
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Environment
+      description: OS, browser, Docker version and commit SHA when relevant.
+      placeholder: Windows 11, Chrome 156, Docker Desktop 4.x, commit abc1234
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Relevant logs
+      description: Paste sanitized logs or screenshots. Redact secrets and private data.
+      render: shell

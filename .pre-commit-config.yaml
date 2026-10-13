@@ -1,0 +1,40 @@
+default_install_hook_types: [pre-commit, pre-push]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: trailing-whitespace
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: 2eeb5678de71a00c0902cbda7105d328432f72cb # v0.16.8
+    hooks:
+      - id: ruff-check
+        args: [--config=backend/pyproject.toml]
+        files: ^backend/(src|tests)/.*\.py$
+
+  - repo: https://github.com/psf/black
+    rev: 782e5605c86aab56be6f905da10dcd3e463fd9c2 # 25.12.0
+    hooks:
+      - id: black
+        args: [--config=backend/pyproject.toml]
+        files: ^backend/(src|tests)/.*\.py$
+
+  - repo: local
+    hooks:
+      - id: frontend-tests
+        name: frontend contract tests
+        entry: npm --prefix frontend test
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

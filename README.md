@@ -15,6 +15,13 @@ bàn giao nhiệm kỳ trên một nền tảng có lịch sử kiểm toán đ�
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![Coverage](https://img.shields.io/badge/Domain%20%2F%20Application-100%25-brightgreen)](#quality)
 
+[![CI](https://github.com/nguyentthuy11work-dev/itb-club-assets/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nguyentthuy11work-dev/itb-club-assets/actions/workflows/ci.yml)
+[![Security](https://github.com/nguyentthuy11work-dev/itb-club-assets/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/nguyentthuy11work-dev/itb-club-assets/actions/workflows/security.yml)
+[![OpenSSF Scorecard](https://github.com/nguyentthuy11work-dev/itb-club-assets/actions/workflows/scorecard.yml/badge.svg?branch=main)](https://github.com/nguyentthuy11work-dev/itb-club-assets/actions/workflows/scorecard.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+[Quick start](#quick-start) · [Architecture](#architecture) · [Quality](#quality) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+
 </div>
 
 <p align="center">
@@ -258,6 +265,10 @@ npm audit
 GitHub Actions runs backend checks against PostgreSQL 18, enforces 100% coverage,
 tests/builds the frontend and verifies both Docker images.
 
+Additional repository automation includes CodeQL analysis, secret scanning,
+pull-request dependency review, OpenSSF Scorecard, Dependabot, pre-commit hooks
+and automatically prepared release notes.
+
 ## Repository layout
 
 ```text
@@ -335,4 +346,6 @@ Only reset when local data is no longer needed.
 
 <div align="center">
 Built as an auditable, concurrency-safe alternative to spreadsheet asset tracking.
+
+[Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Code of conduct](CODE_OF_CONDUCT.md) · [MIT license](LICENSE)
 </div>
