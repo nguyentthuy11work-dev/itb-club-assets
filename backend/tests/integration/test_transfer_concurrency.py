@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import tempfile
 import unittest
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
@@ -52,13 +53,15 @@ class TransferConcurrencyTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         self.engine = create_async_engine(os.environ["AMS_DATABASE_URL"], pool_pre_ping=True)
         self.session_maker = async_sessionmaker(self.engine, expire_on_commit=False)
-        self.storage_root = Path("/tmp/opencode/ams-transfer-tests")
+        self.temporary = tempfile.TemporaryDirectory()
+        self.storage_root = Path(self.temporary.name)
         await self._cleanup()
         await self._seed()
 
     async def asyncTearDown(self) -> None:
         await self._cleanup()
         await self.engine.dispose()
+        self.temporary.cleanup()
 
     async def test_both_confirmations_create_one_target_and_preserve_balance(self) -> None:
         """Serialize on the Transfer root and complete custody exactly once."""

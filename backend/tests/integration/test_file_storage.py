@@ -76,7 +76,7 @@ class LocalFileStorageTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         """Create storage under the approved temporary workspace."""
 
-        self.temporary = tempfile.TemporaryDirectory(dir="/tmp/opencode")
+        self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
         self.storage = LocalFileStorage(self.root)
 

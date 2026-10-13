@@ -76,7 +76,7 @@ class CustodyConfirmationApiTests(unittest.IsolatedAsyncioTestCase):
 
         self.engine = create_async_engine(os.environ["AMS_DATABASE_URL"], pool_pre_ping=True)
         self.session_maker = async_sessionmaker(self.engine, expire_on_commit=False)
-        self.temporary = tempfile.TemporaryDirectory(dir="/tmp/opencode")
+        self.temporary = tempfile.TemporaryDirectory()
         self.storage_root = Path(self.temporary.name)
         await self._cleanup()
         async with self.session_maker() as session:

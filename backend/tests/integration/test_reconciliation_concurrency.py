@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import tempfile
 import unittest
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -47,6 +48,8 @@ class ReconciliationConcurrencyTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         self.engine = create_async_engine(os.environ["AMS_DATABASE_URL"], pool_pre_ping=True)
         self.session_maker = async_sessionmaker(self.engine, expire_on_commit=False)
+        self.temporary = tempfile.TemporaryDirectory()
+        self.storage_root = Path(self.temporary.name)
         await self._cleanup()
         await self._seed_discrepancy()
         self.actor = CurrentActor(HR_ID, frozenset({OperationalRole.HR}))
@@ -55,6 +58,7 @@ class ReconciliationConcurrencyTests(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         await self._cleanup()
         await self.engine.dispose()
+        self.temporary.cleanup()
 
     async def test_concurrent_resolve_and_close_cannot_bypass_discrepancy(self) -> None:
         """Serialize both commands on the session root and reach a legal final state."""
@@ -121,7 +125,7 @@ class ReconciliationConcurrencyTests(unittest.IsolatedAsyncioTestCase):
         return ReconciliationService(
             IdempotentCommandExecutor(unit_of_work_factory, clock),
             unit_of_work_factory,
-            EvidenceStorageService(LocalFileStorage(Path("/tmp/opencode/ams-recon-tests"))),
+            EvidenceStorageService(LocalFileStorage(self.storage_root)),
             clock,
         )
 
