@@ -23,7 +23,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "asyncpg-stubs>=0.30,<1",
-    "black>=24.0,<26",
+    "black>=24.0,<27",
     "httpx>=0.27,<1",
     "mypy>=1.10,<2",
     "pytest>=8.0,<9",
