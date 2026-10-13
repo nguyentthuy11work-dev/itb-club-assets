@@ -76,6 +76,7 @@ jobs:
           -user=ams_app
           -password=ams_ci
           -locations=filesystem:/flyway/sql
+          -connectRetries=30
           migrate
 
       - name: Static analysis
