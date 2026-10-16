@@ -79,12 +79,12 @@ export default function PhotoEvidenceModal({ title, onCancel, onSubmit }) {
         {error && <div className="error-box">{error}</div>}
 
         <div className="flex-row" style={{ justifyContent: 'flex-end' }}>
-          <button type="button" className="btn outline" onClick={onCancel} disabled={submitting}>Huỷ</button>
+          <button type="button" className="btn outline" onClick={onCancel} disabled={submitting}>Hủy</button>
           <button type="button" className="btn primary" onClick={handleSubmit} disabled={photos.length === 0 || submitting}>
             {submitting ? 'Đang gửi...' : 'Xác nhận'}
           </button>
         </div>
-        <div className="hint" style={{ color: '#999' }}>
+        <div className="hint" style={{ color: 'var(--muted)' }}>
           Nút Xác nhận disable đến khi có ≥1 ảnh. Dùng chung cho "Đã trả" và "Xác nhận đã nhận lại", chỉ đổi tiêu đề.
         </div>
       </div>

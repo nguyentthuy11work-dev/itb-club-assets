@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import Layout from '../components/Layout';
+import { badgeClass, CONDITION_LABEL, HANDOVER_STATUS, label } from '../components/labels';
 import { handoverService } from '../api/services';
 import { useAuth } from '../context/AuthContext';
 
@@ -86,17 +87,17 @@ export default function Handover() {
     && handover.status !== 'LOCKED';
 
   return (
-    <Layout title="Bàn giao nhiệm kỳ" subtitle="Snapshot theo nhiệm kỳ, xác nhận hai phía và khóa bất biến.">
+    <Layout title="Bàn giao nhiệm kỳ" subtitle="Chốt danh sách tài sản cuối nhiệm kỳ; HR cũ và HR mới cùng xác nhận.">
       <div className="card" style={{ padding: 18, display: 'grid', gap: 14 }}>
-        <form className="flex-row wrap" onSubmit={create}>
-          <label className="field flex-1">Term ID đã cấu hình
+        <form className="field-row" onSubmit={create}>
+          <label className="field flex-1">Mã nhiệm kỳ
             <input required value={termId} onChange={(event) => setTermId(event.target.value)} />
           </label>
-          <button className="btn primary" disabled={!!busy}>Tạo snapshot</button>
+          <button className="btn primary" disabled={!!busy || !termId.trim()}>Chốt danh sách</button>
         </form>
         <div className="flex-row wrap">
-          <input className="flex-1" placeholder="Handover ID" value={handoverId} onChange={(event) => setHandoverId(event.target.value)} />
-          <button className="btn outline" disabled={!handoverId || !!busy} onClick={() => load()}>Tải biên bản</button>
+          <input className="flex-1" placeholder="Mã biên bản bàn giao" aria-label="Mã biên bản bàn giao" value={handoverId} onChange={(event) => setHandoverId(event.target.value)} />
+          <button className="btn primary" disabled={!handoverId || !!busy} onClick={() => load()}>Tải biên bản</button>
         </div>
         {error && <div className="error-box">{error}</div>}
       </div>
@@ -106,7 +107,7 @@ export default function Handover() {
           <div className="card" style={{ padding: 18, display: 'grid', gap: 12 }}>
             <div className="flex-row wrap">
               <strong>{handover.termName}</strong>
-              <span className={`badge ${handover.status === 'LOCKED' ? 'green' : ''}`}>{handover.status}</span>
+              <span className={`badge ${badgeClass(HANDOVER_STATUS, handover.status)}`}>{label(HANDOVER_STATUS, handover.status)}</span>
               <span className="hint">{handover.termStartsOn} → {handover.termEndsOn}</span>
               <div className="flex-1" />
               <button className="btn outline" disabled={!!busy} onClick={exportCsv}>Xuất CSV</button>
@@ -120,17 +121,17 @@ export default function Handover() {
             {handover.status === 'LOCKED' && <div className="notice-box">Biên bản đã khóa và không thể chỉnh sửa.</div>}
           </div>
 
-          <div className="card" style={{ overflow: 'hidden' }}>
+          <div className="card" style={{ overflowX: 'auto' }}>
             <table className="table">
-              <thead><tr><th>Tài sản</th><th>Tổng</th><th>Khả dụng</th><th>Tình trạng</th><th>Custody</th><th>Cảnh báo</th></tr></thead>
+              <thead><tr><th>Tài sản</th><th>Tổng</th><th>Khả dụng</th><th>Tình trạng</th><th>Số người giữ</th><th>Cảnh báo</th></tr></thead>
               <tbody>
                 {handover.items.map((item) => (
                   <tr key={item.id} className={item.isStale ? 'alt' : undefined}>
                     <td><strong>{item.assetName}</strong><div className="hint">{item.assetId}</div></td>
                     <td>{item.totalQuantity}</td>
                     <td>{item.availableQuantity}</td>
-                    <td>{item.condition}</td>
-                    <td>{item.custodies.length}<div className="hint">Snapshot: {new Date(item.snapshotAt).toLocaleString('vi-VN')}</div></td>
+                    <td>{label(CONDITION_LABEL, item.condition)}</td>
+                    <td>{item.custodies.length}<div className="hint">Chốt lúc: {new Date(item.snapshotAt).toLocaleString('vi-VN')}</div></td>
                     <td>{item.isStale ? <span className="badge red">Không giao dịch trong nhiệm kỳ</span> : <span className="badge green">Có giao dịch</span>}</td>
                   </tr>
                 ))}

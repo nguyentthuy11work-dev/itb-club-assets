@@ -10,7 +10,7 @@ import {
   toTicketQuery,
 } from './ticketContract.js';
 import { formatTicketActionError } from '../pages/ticketActionError.js';
-import { getTicketActions } from '../pages/ticketActions.js';
+import { getTicketActions, ticketBucket } from '../pages/ticketActions.js';
 
 const TICKET_ID = '00000000-0000-4000-8000-000000000101';
 const BORROWER_ID = '00000000-0000-4000-8000-000000000102';
@@ -110,4 +110,22 @@ test('shows the stable 409 code and maps legacy mock state only at the adapter e
     'Ticket must be PENDING. (INVALID_TICKET_TRANSITION)',
   );
   assert.equal(mapLegacyTicket({ id: TICKET_ID, status: 'ACTIVE', asset: 'Camera' }).status, 'BORROWING');
+});
+
+test('buckets every ticket status exactly once per perspective', () => {
+  const expected = {
+    borrower: {
+      PENDING: 'waiting', APPROVED: 'mine', BORROWING: 'mine', RETURNING: 'waiting',
+      CANCEL_PENDING: 'waiting', CLOSED: 'closed', REJECTED: 'closed', CANCELLED: 'closed',
+    },
+    holder: {
+      PENDING: 'mine', APPROVED: 'waiting', BORROWING: 'waiting', RETURNING: 'mine',
+      CANCEL_PENDING: 'mine', CLOSED: 'closed', REJECTED: 'closed', CANCELLED: 'closed',
+    },
+  };
+  for (const [perspective, byStatus] of Object.entries(expected)) {
+    for (const [status, bucket] of Object.entries(byStatus)) {
+      assert.equal(ticketBucket({ status }, perspective), bucket, `${perspective} ${status}`);
+    }
+  }
 });

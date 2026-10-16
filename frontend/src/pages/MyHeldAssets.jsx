@@ -3,11 +3,13 @@ import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
 import PhotoEvidenceModal from '../components/PhotoEvidenceModal';
 import { assetService } from '../api/services';
+import { useNavCounts } from '../context/NavCountsContext';
 
 export default function MyHeldAssets() {
   const [assets, setAssets] = useState(null);
   const [error, setError] = useState('');
   const [confirmTarget, setConfirmTarget] = useState(null);
+  const { refresh: refreshCounts } = useNavCounts();
 
   const load = useCallback(async () => {
     setError('');
@@ -27,6 +29,7 @@ export default function MyHeldAssets() {
     await assetService.confirmHeld(confirmTarget.id, payload);
     setConfirmTarget(null);
     load();
+    refreshCounts();
   }
 
   return (
@@ -37,12 +40,12 @@ export default function MyHeldAssets() {
         <div className="loading-block">Đang tải...</div>
       ) : assets.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-title">Trạng thái rỗng</div>
-          <div className="empty-desc">Bạn chưa giữ tài sản nào. Khi HR gán tài sản cho bạn, mục này sẽ xuất hiện kèm thông báo.</div>
+          <div className="empty-title">Bạn chưa giữ tài sản nào</div>
+          <div className="empty-desc">Khi HR gán tài sản cho bạn, mục này sẽ xuất hiện kèm thông báo.</div>
         </div>
       ) : (
         <>
-          <div className="card" style={{ overflow: 'hidden' }}>
+          <div className="card" style={{ overflowX: 'auto' }}>
             <table className="table">
               <thead>
                 <tr>
@@ -62,7 +65,7 @@ export default function MyHeldAssets() {
                     <td><StatusBadge status={a.status} /></td>
                     <td>
                       {a.status === 'CONFIRMED' ? (
-                        <span className="hint" style={{ color: '#888' }}>không có</span>
+                        <span className="hint">không có</span>
                       ) : (
                         <button className="btn small primary" onClick={() => setConfirmTarget(a)}>Xác nhận đã nhận</button>
                       )}
@@ -73,7 +76,7 @@ export default function MyHeldAssets() {
             </table>
           </div>
           <div className="hint">
-            Badge vàng "Quá hạn xác nhận" hiện sau 24h; hệ thống nhắc lại cả HR và bạn (UR-B05). Custody đã có hiệu lực ngay khi HR gán, xác nhận chỉ để ghi nhận (BR-R01).
+            Tài sản HR gán thuộc quyền giữ của bạn ngay; hãy xác nhận trong 24h để ghi nhận.
           </div>
         </>
       )}

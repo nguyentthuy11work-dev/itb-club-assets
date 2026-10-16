@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 140" fill="none">
+  <!-- Placeholder empty state: thay bằng minh hoạ cùng tên file. -->
+  <ellipse cx="100" cy="128" rx="70" ry="7" fill="#EEF0F3"/>
+  <path d="M40 62 L100 40 L160 62 L100 84 Z" fill="#FFF1DE"/>
+  <path d="M40 62 L100 84 L100 128 L40 106 Z" fill="#F7941D"/>
+  <path d="M160 62 L100 84 L100 128 L160 106 Z" fill="#D9740A"/>
+  <path d="M40 62 L22 82 L82 104 L100 84 Z" fill="#FFB65C"/>
+  <path d="M160 62 L178 82 L118 104 L100 84 Z" fill="#FFB65C"/>
+  <circle cx="148" cy="24" r="5" fill="#3C66E0"/>
+  <circle cx="54" cy="26" r="3.5" fill="#2B3A67"/>
+  <path d="M100 8 l4 8 l8 4 l-8 4 l-4 8 l-4 -8 l-8 -4 l8 -4 Z" fill="#F5B82E"/>
+</svg>

@@ -69,7 +69,7 @@ export default function ShiftClose() {
       {shift.status === 'ACTIVE_WITH_DEVIATION' && <div className="notice-box warn">Ca bắt đầu với chênh lệch đã báo Teamlead.</div>}
 
       <div className="card shift-action-card">
-        <div><div style={{ font: '700 16px var(--font-display)' }}>Tồn thực tế cuối ca</div><div className="hint">Tiêu hao = quota + tồn ca trước − tồn thực tế cuối ca.</div></div>
+        <div><div style={{ font: '700 16px var(--font-display)' }}>Tồn thực tế cuối ca</div><div className="hint">Tiêu hao = định mức + tồn ca trước − tồn thực tế cuối ca.</div></div>
         <table className="table">
           <thead><tr><th>Mã tài sản</th><th>Kỳ vọng đầu ca</th><th>Thực nhận</th><th>Tồn cuối ca</th><th>Tiêu hao</th></tr></thead>
           <tbody>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 /**
  * Modal nhập lý do dùng chung cho "Từ chối Ticket" (bắt buộc lý do) và
- * "Gửi yêu cầu huỷ" (lý do không bắt buộc).
+ * "Gửi yêu cầu hủy" (lý do không bắt buộc).
  *
  * props:
  *  - title, subtitle
@@ -46,11 +46,10 @@ export default function ReasonModal({ title, subtitle, required = false, confirm
         {error && <div className="error-box">{error}</div>}
 
         <div className="flex-row" style={{ justifyContent: 'flex-end' }}>
-          <button type="button" className="btn outline" onClick={onCancel} disabled={submitting}>Huỷ</button>
+          <button type="button" className="btn outline" onClick={onCancel} disabled={submitting}>Hủy</button>
           <button
             type="button"
-            className={`btn ${confirmDanger ? '' : 'primary'}`}
-            style={confirmDanger ? { borderColor: '#c0392b', background: '#c0392b', color: '#fff' } : undefined}
+            className={`btn ${confirmDanger ? 'danger-solid' : 'primary'}`}
             onClick={handleSubmit}
             disabled={disabled || submitting}
           >

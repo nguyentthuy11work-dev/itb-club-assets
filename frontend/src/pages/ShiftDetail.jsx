@@ -97,10 +97,10 @@ export default function ShiftDetail() {
         <div className="card shift-action-card">
           <div>
             <div style={{ font: '700 16px var(--font-display)' }}>Xác nhận số lượng thực nhận</div>
-            <div className="hint">Kỳ vọng = quota ca này + tồn thực tế từ ca trước.</div>
+            <div className="hint">Kỳ vọng = định mức ca này + tồn thực tế từ ca trước.</div>
           </div>
           <table className="table">
-            <thead><tr><th>Mã tài sản</th><th>Quota</th><th>Tồn ca trước</th><th>Kỳ vọng</th><th>Thực nhận</th><th>Lệch</th></tr></thead>
+            <thead><tr><th>Mã tài sản</th><th>Định mức</th><th>Tồn ca trước</th><th>Kỳ vọng</th><th>Thực nhận</th><th>Lệch</th></tr></thead>
             <tbody>
               {items.map((item) => {
                 const difference = Number(item.actualQuantity) - item.expectedOpenQuantity;

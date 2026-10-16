@@ -1,17 +1,22 @@
-// Quy ước màu badge (đúng theo tham chiếu wireframe 5o):
+// Quy ước màu badge:
 // Vàng = cảnh báo mềm (sắp đến hạn, quá 24h chưa xác nhận)
 // Đỏ   = cảnh báo cứng (quá hạn trả, chênh lệch)
-// Xám  = chờ trung tính (chờ duyệt, chờ bên còn lại)
-// Xanh = hoàn tất (đã duyệt, đã đóng, đã xác nhận)
+// Cam  = chờ (chờ duyệt, chờ bên còn lại)
+// Xanh dương = đang diễn ra (đang mượn)
+// Xanh lá = hoàn tất (đã duyệt, đã xác nhận) · Xám = đã đóng/hủy
 
 const STATUS_MAP = {
   PENDING: { text: 'Chờ duyệt', color: '' },
   APPROVED: { text: 'Đã duyệt', color: 'green' },
-  ACTIVE: { text: 'Đang mượn', color: 'green' },
-  AWAITING_HOLDER_CONFIRM: { text: 'Chờ Custodian xác nhận', color: '' },
-  CANCEL_REQUESTED: { text: 'Người mượn xin huỷ', color: 'gold' },
+  BORROWING: { text: 'Đang mượn', color: 'blue' },
+  RETURNING: { text: 'Chờ nhận lại', color: '' },
+  CANCEL_PENDING: { text: 'Chờ duyệt hủy', color: 'gold' },
+  // Mã cũ của mock trước khi qua mapLegacyTicket
+  ACTIVE: { text: 'Đang mượn', color: 'blue' },
+  AWAITING_HOLDER_CONFIRM: { text: 'Chờ nhận lại', color: '' },
+  CANCEL_REQUESTED: { text: 'Chờ duyệt hủy', color: 'gold' },
   REJECTED: { text: 'Từ chối', color: 'red' },
-  CANCELLED: { text: 'Đã hủy', color: '' },
+  CANCELLED: { text: 'Đã hủy', color: 'dark' },
   CLOSED: { text: 'Đã đóng', color: 'dark' },
   CONFIRMED: { text: 'Đã xác nhận', color: 'green' },
   PENDING_CONFIRM: { text: 'Chờ tôi xác nhận', color: '' },

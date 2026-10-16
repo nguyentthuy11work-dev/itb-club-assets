@@ -43,7 +43,7 @@ export default function ShiftList() {
       </div>
       {error && <div className="page-error">{error}</div>}
 
-      <div className="card" style={{ overflow: 'hidden' }}>
+      <div className="card" style={{ overflowX: 'auto' }}>
         <table className="table">
           <thead>
             <tr><th>Ca</th><th>Lịch</th><th>Sự kiện</th><th>Trạng thái</th><th>Thao tác</th></tr>

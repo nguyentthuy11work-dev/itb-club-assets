@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/StatusBadge';
 import { ticketService } from '../api/services';
-
-const OPEN_STATUSES_BORROWER = ['PENDING', 'APPROVED', 'BORROWING', 'RETURNING', 'CANCEL_PENDING'];
-const CLOSED_STATUSES = ['CLOSED', 'REJECTED', 'CANCELLED'];
+import { ticketBucket } from './ticketActions';
 
 export default function Tickets() {
   const navigate = useNavigate();
@@ -18,6 +16,8 @@ export default function Tickets() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setTickets([]);
+    setError('');
     ticketService
       .list({ role })
       .then((list) => !cancelled && setTickets(list))
@@ -29,22 +29,12 @@ export default function Tickets() {
   }, [role]);
 
   const counts = useMemo(() => {
-    const mine = tickets.filter((t) =>
-      role === 'borrower'
-        ? ['PENDING', 'CANCEL_PENDING'].includes(t.status) === false && OPEN_STATUSES_BORROWER.includes(t.status) && needsBorrowerAction(t)
-        : needsHolderAction(t)
-    ).length;
-    const waiting = tickets.filter((t) => OPEN_STATUSES_BORROWER.includes(t.status) && !needsHolderAction(t) && !needsBorrowerAction(t)).length;
-    const closed = tickets.filter((t) => CLOSED_STATUSES.includes(t.status)).length;
-    return { mine, waiting, closed };
+    const tally = { mine: 0, waiting: 0, closed: 0 };
+    tickets.forEach((t) => { tally[ticketBucket(t, role)] += 1; });
+    return tally;
   }, [tickets, role]);
 
-  const filtered = tickets.filter((t) => {
-    if (chip === 'closed') return CLOSED_STATUSES.includes(t.status);
-    if (chip === 'mine') return role === 'borrower' ? needsBorrowerAction(t) : needsHolderAction(t);
-    if (chip === 'waiting') return !CLOSED_STATUSES.includes(t.status) && !(role === 'borrower' ? needsBorrowerAction(t) : needsHolderAction(t));
-    return true;
-  });
+  const filtered = tickets.filter((t) => ticketBucket(t, role) === chip);
 
   return (
     <Layout title="Ticket">
@@ -65,7 +55,7 @@ export default function Tickets() {
 
       {error && <div className="page-error">{error}</div>}
 
-      <div className="card" style={{ overflow: 'hidden' }}>
+      <div className="card" style={{ overflowX: 'auto' }}>
         <table className="table">
           <thead>
             <tr>
@@ -83,8 +73,8 @@ export default function Tickets() {
               <tr><td colSpan={6} className="hint" style={{ padding: 16 }}>Không có Ticket nào ở mục này.</td></tr>
             )}
             {!loading && filtered.map((t, i) => (
-              <tr key={t.id} className={i % 2 === 1 ? 'alt' : undefined} style={{ cursor: 'pointer' }} onClick={() => navigate(`/ticket/${t.id}`)}>
-                <td>{t.id}</td>
+              <tr key={t.id} className={'clickable' + (i % 2 === 1 ? ' alt' : '')} onClick={() => navigate(`/ticket/${t.id}`)}>
+                <td><Link to={`/ticket/${t.id}`} onClick={(e) => e.stopPropagation()} style={{ fontWeight: 600 }}>{t.id}</Link></td>
                 <td>{t.asset}</td>
                 <td>{role === 'borrower' ? t.holder : t.borrower}</td>
                 <td>{t.dueDate || '—'}</td>
@@ -97,25 +87,18 @@ export default function Tickets() {
           </tbody>
         </table>
       </div>
-      <div className="hint">Cột "Việc của tôi" luôn hoặc là một nút, hoặc là câu ghi rõ đang chờ ai.</div>
     </Layout>
   );
 }
 
-function needsBorrowerAction(t) {
-  return t.status === 'APPROVED' || t.status === 'BORROWING';
-}
-function needsHolderAction(t) {
-  return t.status === 'PENDING' || t.status === 'RETURNING' || t.status === 'CANCEL_PENDING';
-}
 
 function MyTaskCell({ ticket: t, role, onOpen }) {
   if (role === 'borrower') {
     if (t.status === 'BORROWING') return <button className="btn small primary" onClick={onOpen}>Đã trả</button>;
     if (t.status === 'APPROVED') return <button className="btn small primary" onClick={onOpen}>Xác nhận đã nhận</button>;
-    if (t.status === 'PENDING') return <span className="hint" style={{ color: '#888' }}>chờ {t.holder} duyệt</span>;
-    if (t.status === 'RETURNING') return <span className="hint" style={{ color: '#888' }}>chờ {t.holder} nhận lại</span>;
-    return <span className="hint" style={{ color: '#888' }}>—</span>;
+    if (t.status === 'PENDING') return <span className="hint">chờ {t.holder} duyệt</span>;
+    if (t.status === 'RETURNING') return <span className="hint">chờ {t.holder} nhận lại</span>;
+    return <span className="hint">—</span>;
   }
   if (t.status === 'PENDING') {
     return (
@@ -129,10 +112,10 @@ function MyTaskCell({ ticket: t, role, onOpen }) {
   if (t.status === 'CANCEL_PENDING') {
     return (
       <span className="flex-row" style={{ gap: 6 }}>
-        <button className="btn small" onClick={onOpen}>Đồng ý huỷ</button>
-        <button className="btn small danger-outline" onClick={onOpen}>Từ chối huỷ</button>
+        <button className="btn small" onClick={onOpen}>Đồng ý hủy</button>
+        <button className="btn small danger-outline" onClick={onOpen}>Từ chối hủy</button>
       </span>
     );
   }
-  return <span className="hint" style={{ color: '#888' }}>chờ người mượn trả</span>;
+  return <span className="hint">chờ người mượn trả</span>;
 }

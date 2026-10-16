@@ -4,6 +4,11 @@ import { getToken, setToken } from '../api/client';
 
 const AuthContext = createContext(null);
 
+// Chỉ quyết định UI hiển thị gì; backend vẫn tự kiểm tra quyền trên từng API.
+export function hasRole(user, ...roles) {
+  return roles.some((role) => user?.roles?.includes(role));
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);

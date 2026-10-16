@@ -1,169 +1,180 @@
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { ROLES, useRole } from '../context/RoleContext';
-import { dashboardService, hrService, shiftService } from '../api/services';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import {
+  ArrowsLeftRight, CalendarCheck, CaretDown, ChartBar, ClipboardText, ClockCounterClockwise,
+  HandGrabbing, Handshake, House, List, ListChecks, Package, PresentationChart, Scales,
+  Ticket, UserGear, X,
+} from '@phosphor-icons/react';
+import { hasRole, useAuth } from '../context/AuthContext';
+import { useNavCounts } from '../context/NavCountsContext';
 
-const ROLE_TABS = [
-  { value: ROLES.MEMBER, label: 'Thành viên' },
-  { value: ROLES.HR, label: 'HR' },
-  { value: ROLES.SHIFT_LEAD, label: 'Trưởng ca' },
-  { value: ROLES.TEAM_LEAD_ASSET, label: 'Teamlead tài sản' },
+// Menu hiện mọi mục user có quyền, gom theo nhóm. Mục không có `roles` thì ai cũng thấy;
+// nhóm không còn mục nào thì ẩn cả nhóm.
+const NAV_GROUPS = [
+  { title: '', items: [{ to: '/', label: 'Trang chủ', icon: House, end: true }] },
+  {
+    title: 'Cá nhân',
+    items: [
+      { to: '/muon-tai-san', label: 'Mượn tài sản', icon: HandGrabbing },
+      { to: '/ticket', label: 'Ticket', icon: Ticket, badgeKey: 'ticketCount' },
+      { to: '/tai-san-toi-giu', label: 'Tài sản tôi giữ', icon: Package, badgeKey: 'heldTotal' },
+      { to: '/doi-soat-cua-toi', label: 'Đối soát của tôi', icon: ListChecks },
+      { to: '/chuyen-custody', label: 'Chuyển quyền giữ', icon: ArrowsLeftRight },
+    ],
+  },
+  {
+    title: 'Ca trực',
+    items: [{ to: '/ca-truc', label: 'Ca trực của tôi', icon: ClipboardText, badgeKey: 'openShifts', roles: ['SHIFT_LEAD'] }],
+  },
+  {
+    title: 'Sự kiện',
+    items: [
+      { to: '/cau-hinh-su-kien', label: 'Cấu hình sự kiện', icon: CalendarCheck, roles: ['TEAM_LEAD_ASSET'] },
+      { to: '/bao-cao-su-kien', label: 'Báo cáo sự kiện', icon: PresentationChart, roles: ['TEAM_LEAD_ASSET', 'HR'] },
+    ],
+  },
+  {
+    title: 'Quản lý',
+    items: [
+      { to: '/tong-quan', label: 'Tổng quan CLB', icon: ChartBar, roles: ['HR'] },
+      { to: '/tai-san', label: 'Tài sản', icon: Package, roles: ['HR'] },
+      { to: '/lich-su-giao-dich', label: 'Lịch sử giao dịch', icon: ClockCounterClockwise, roles: ['HR'] },
+      { to: '/doi-soat', label: 'Đối soát', icon: Scales, badgeKey: 'openRecons', roles: ['HR'] },
+      { to: '/ban-giao-nhiem-ky', label: 'Bàn giao nhiệm kỳ', icon: Handshake, roles: ['HR'] },
+    ],
+  },
+  {
+    title: 'Quản trị',
+    items: [{ to: '/phan-quyen', label: 'Phân quyền', icon: UserGear, roles: ['SYSTEM_ADMIN', 'HR'] }],
+  },
 ];
 
-function buildNavItems(role) {
-  const base = [
-    { to: '/', label: 'Dashboard', end: true },
-    { to: '/muon-tai-san', label: 'Mượn tài sản' },
-    { to: '/ticket', label: 'Ticket', badgeKey: 'ticketCount' },
-    { to: '/tai-san-toi-giu', label: 'Tài sản tôi giữ', badgeKey: 'heldTotal' },
-    { to: '/doi-soat-cua-toi', label: 'Đối soát của tôi' },
-    { to: '/chuyen-custody', label: 'Chuyển Custody' },
-  ];
-
-  if (role === ROLES.SHIFT_LEAD) {
-    base.push({ to: '/ca-truc', label: 'Ca trực của tôi', badgeKey: 'openShifts' });
-  }
-
-  if (role === ROLES.TEAM_LEAD_ASSET) {
-    base.push(
-      { to: '/cau-hinh-su-kien', label: 'Cấu hình sự kiện' },
-      { to: '/bao-cao-su-kien', label: 'Báo cáo sự kiện' },
-    );
-  }
-
-  if (role === ROLES.HR) {
-    base.push(
-      { to: '/tai-san', label: 'Tài sản' },
-      { to: '/lich-su-giao-dich', label: 'Lịch sử giao dịch' },
-      { to: '/doi-soat', label: 'Reconciliation', badgeKey: 'openRecons' },
-      { to: '/ban-giao-nhiem-ky', label: 'Bàn giao nhiệm kỳ' },
-      { to: '/bao-cao-su-kien', label: 'Báo cáo sự kiện' },
-    );
-  }
-
-  return base;
-}
-
-function roleTagForUser(role) {
-  if (role === ROLES.HR) return 'HR · Thành viên';
-  if (role === ROLES.SHIFT_LEAD) return 'Trưởng ca · Thành viên';
-  if (role === ROLES.TEAM_LEAD_ASSET) return 'Teamlead tài sản · Thành viên';
-  return 'Thành viên';
+function visibleGroups(user) {
+  return NAV_GROUPS
+    .map((group) => ({ ...group, items: group.items.filter((item) => !item.roles || hasRole(user, ...item.roles)) }))
+    .filter((group) => group.items.length > 0);
 }
 
 export default function Layout({ children, title, subtitle }) {
   const { user, logout } = useAuth();
-  const { role, setRole } = useRole();
   const navigate = useNavigate();
-  const [counts, setCounts] = useState({});
+  const { counts, refreshIfStale } = useNavCounts();
 
-  const refreshCounts = useCallback(async () => {
-    try {
-      const dash = await dashboardService.get();
-      const next = {
-        ticketCount: dash.todos?.length || 0,
-        heldTotal: dash.stats?.heldTotal || 0,
-      };
-      if (role === ROLES.HR) {
-        const hr = await hrService.getDashboard();
-        next.openRecons = hr.stats?.openRecons ?? 0;
-      }
-      if (role === ROLES.SHIFT_LEAD) {
-        const page = await shiftService.list({ pageSize: 100 });
-        next.openShifts = page.items.filter((shift) => shift.status !== 'CLOSED').length;
-      }
-      setCounts(next);
-    } catch {
-      // im lặng — badge không phải dữ liệu tối quan trọng
-    }
-  }, [role]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    refreshCounts();
-  }, [refreshCounts, role]);
+    refreshIfStale();
+  }, [refreshIfStale]);
 
-  const navItems = buildNavItems(role);
+  // Drawer chỉ có tác dụng dưới 1024px; Esc để đóng.
+  useEffect(() => {
+    if (!drawerOpen) return undefined;
+    const onKey = (e) => e.key === 'Escape' && setDrawerOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [drawerOpen]);
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <div className="sidebar-brand-row">
-          <div className="brand-logo">b</div>
-          <div>
-            <div className="sidebar-brand">ITB Club Assets</div>
-            <div className="sidebar-brand-sub">Quản lý tài sản CLB</div>
-          </div>
-        </div>
-
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
-          >
-            <span className="flex-row" style={{ gap: 8 }}>
-              <span className="nav-dot" />
-              {item.label}
-            </span>
-            {item.badgeKey && !!counts[item.badgeKey] && (
-              <span className={'nav-badge' + (item.danger ? ' danger' : '')}>{counts[item.badgeKey]}</span>
-            )}
-          </NavLink>
-        ))}
-
-        <div className="sidebar-foot">
-          <div className="sidebar-notice">
-            <div className="sidebar-notice-title">Nguyên tắc phân quyền</div>
-            Menu render theo Role. Mục ngoài quyền được ẩn hẳn, không để trạng thái mở.
-          </div>
-          <div style={{ marginTop: 10 }}>
-            <button
-              className="btn outline"
-              style={{ width: '100%' }}
-              onClick={async () => {
-                await logout();
-                navigate('/dang-nhap');
-              }}
-            >
-              Đăng xuất
+      <div className={'drawer-backdrop' + (drawerOpen ? ' open' : '')} onClick={() => setDrawerOpen(false)} />
+      <div className={'sidebar-frame' + (drawerOpen ? ' open' : '')} id="app-sidebar">
+        <aside className="sidebar">
+          <div className="flex-row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Link to="/" className="sidebar-brand-row" aria-label="ITB Club — về trang chủ">
+              <img className="brand-logo" src="/logo.svg" alt="" />
+              <div>
+                <div className="sidebar-brand">ITB Assets</div>
+                <div className="sidebar-brand-sub">Quản lý tài sản CLB</div>
+              </div>
+            </Link>
+            <button type="button" className="btn icon ghost menu-toggle" aria-label="Đóng menu" onClick={() => setDrawerOpen(false)}>
+              <X size={20} />
             </button>
           </div>
-        </div>
-      </aside>
 
-      <div className="main-area">
-        <div className="topbar">
-          <div className="topbar-left">
-            <div className="role-switch">
-              <span className="role-switch-label">VAI</span>
-              {ROLE_TABS.map((tab) => (
-                <button
-                  key={tab.value}
-                  className={'role-pill' + (role === tab.value ? ' active' : '')}
-                  onClick={() => { setRole(tab.value); navigate('/'); }}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+          <nav aria-label="Điều hướng chính">
+            {visibleGroups(user).map((group) => (
+              <div key={group.title} className="nav-group">
+                {group.title && <div className="nav-group-title">{group.title}</div>}
+                {group.items.map(({ icon: Icon, ...item }) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    onClick={() => setDrawerOpen(false)}
+                    className={({ isActive }) => 'nav-item' + (isActive ? ' active' : '')}
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <Icon size={19} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" />
+                        <span className="nav-label">{item.label}</span>
+                        {item.badgeKey && !!counts[item.badgeKey] && (
+                          <span className="nav-badge">{counts[item.badgeKey]}</span>
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                ))}
+              </div>
+            ))}
+          </nav>
+
+          <div className="sidebar-foot">
+            <div className="sidebar-slogan">Yes, we&apos;re open</div>
+            <div className="sidebar-brand-sub">Information Technology of Business</div>
           </div>
-          <div className="avatar-cluster">
-            <div className="avatar-chip" title={user?.name}>
-              {user?.name ? user.name.charAt(0).toUpperCase() : '?'}
+        </aside>
+      </div>
+
+      <div className="main-frame">
+        <div className="main-area">
+          <header className="topbar">
+            <button
+              type="button"
+              className="btn icon menu-toggle"
+              aria-label="Mở menu"
+              aria-controls="app-sidebar"
+              aria-expanded={drawerOpen}
+              onClick={() => setDrawerOpen(true)}
+            >
+              <List size={20} />
+            </button>
+            <div className="topbar-title">
+              <h1 className="page-title">{title}</h1>
+              {subtitle && <div className="page-sub">{subtitle}</div>}
             </div>
-            <div className="user-meta">
-              <div className="user-name">{user?.name}</div>
-              <div className="user-role">{roleTagForUser(role)}</div>
+
+            <div className="topbar-actions">
+              <details className="user-menu">
+                <summary aria-label={`Tài khoản: ${user?.name || ''}`}>
+                  <span className="avatar-chip" aria-hidden="true">
+                    {user?.name ? user.name.charAt(0).toUpperCase() : '?'}
+                  </span>
+                  <span className="user-meta">
+                    <span className="user-name">{user?.name}</span>
+                  </span>
+                  <span className="user-menu-caret" aria-hidden="true"><CaretDown size={14} /></span>
+                </summary>
+                <div className="user-menu-panel">
+                  <div className="user-menu-info">
+                    <div className="user-name">{user?.name}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn outline"
+                    onClick={async () => {
+                      await logout();
+                      navigate('/dang-nhap');
+                    }}
+                  >
+                    Đăng xuất
+                  </button>
+                </div>
+              </details>
             </div>
-          </div>
+          </header>
+          <main className="page-body">{children}</main>
         </div>
-        <div style={{ padding: '18px 28px 0' }}>
-          <h1 className="page-title">{title}</h1>
-          {subtitle && <div className="page-sub">{subtitle}</div>}
-        </div>
-        <div className="page-body">{children}</div>
       </div>
     </div>
   );

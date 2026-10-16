@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 260" fill="none">
+  <!-- Placeholder: thay bằng minh hoạ Storyset/unDraw cùng tên file. -->
+  <ellipse cx="300" cy="248" rx="210" ry="12" fill="#C46A00" opacity=".25"/>
+  <!-- kệ -->
+  <rect x="330" y="70" width="150" height="178" rx="10" fill="#fff" opacity=".9"/>
+  <rect x="330" y="128" width="150" height="6" fill="#2B3A67" opacity=".15"/>
+  <rect x="330" y="188" width="150" height="6" fill="#2B3A67" opacity=".15"/>
+  <rect x="346" y="92" width="40" height="36" rx="6" fill="#FFB65C"/>
+  <rect x="356" y="102" width="20" height="6" rx="3" fill="#fff"/>
+  <rect x="394" y="84" width="34" height="44" rx="6" fill="#2B3A67"/>
+  <circle cx="411" cy="100" r="9" fill="#3C66E0"/>
+  <circle cx="411" cy="118" r="4" fill="#fff" opacity=".6"/>
+  <rect x="436" y="100" width="30" height="28" rx="6" fill="#E3F5EA"/>
+  <rect x="346" y="150" width="58" height="38" rx="6" fill="#F7941D"/>
+  <rect x="368" y="150" width="14" height="14" fill="#FFF1DE"/>
+  <rect x="412" y="156" width="52" height="32" rx="8" fill="#2B3A67"/>
+  <circle cx="438" cy="172" r="10" fill="#fff"/>
+  <circle cx="438" cy="172" r="5" fill="#2B3A67"/>
+  <rect x="350" y="206" width="44" height="42" rx="6" fill="#FFB65C"/>
+  <rect x="402" y="214" width="62" height="34" rx="6" fill="#FFF1DE"/>
+  <!-- người -->
+  <path d="M214 248 L222 178 L250 178 L246 248 Z" fill="#2B3A67"/>
+  <path d="M250 248 L252 178 L276 178 L282 248 Z" fill="#1E2333"/>
+  <rect x="206" y="240" width="34" height="10" rx="5" fill="#1E2333"/>
+  <rect x="254" y="240" width="34" height="10" rx="5" fill="#1E2333"/>
+  <path d="M216 186 C214 140 226 110 248 108 C272 108 284 140 280 186 Z" fill="#fff"/>
+  <path d="M232 112 C240 122 258 122 266 112" stroke="#F7941D" stroke-width="5" stroke-linecap="round"/>
+  <rect x="240" y="88" width="18" height="22" rx="6" fill="#E9A87C"/>
+  <circle cx="249" cy="72" r="24" fill="#E9A87C"/>
+  <path d="M224 70 C222 44 270 40 274 66 C266 58 246 54 230 74 Z" fill="#1E2333"/>
+  <!-- thùng trên tay -->
+  <rect x="226" y="136" width="66" height="50" rx="6" fill="#F7941D"/>
+  <rect x="226" y="136" width="66" height="12" rx="6" fill="#D9740A"/>
+  <rect x="252" y="136" width="14" height="50" fill="#FFF1DE" opacity=".7"/>
+  <circle cx="222" cy="160" r="9" fill="#E9A87C"/>
+  <circle cx="296" cy="160" r="9" fill="#E9A87C"/>
+  <!-- trang trí -->
+  <circle cx="120" cy="60" r="6" fill="#fff" opacity=".7"/>
+  <circle cx="160" cy="120" r="4" fill="#fff" opacity=".6"/>
+  <path d="M300 30 l6 12 l12 6 l-12 6 l-6 12 l-6 -12 l-12 -6 l12 -6 Z" fill="#fff" opacity=".85"/>
+</svg>

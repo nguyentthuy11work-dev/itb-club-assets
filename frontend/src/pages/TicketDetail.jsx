@@ -6,6 +6,7 @@ import PhotoEvidenceModal from '../components/PhotoEvidenceModal';
 import ReasonModal from '../components/ReasonModal';
 import { ticketService } from '../api/services';
 import { useAuth } from '../context/AuthContext';
+import { useNavCounts } from '../context/NavCountsContext';
 import { getTicketActions } from './ticketActions';
 import { formatTicketActionError } from './ticketActionError';
 
@@ -13,6 +14,7 @@ export default function TicketDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { refresh: refreshCounts } = useNavCounts();
   const [ticket, setTicket] = useState(null);
   const [error, setError] = useState('');
   const [modal, setModal] = useState(null); // 'receive' | 'return' | 'holderReceive' | 'reject' | 'cancelRequest'
@@ -55,12 +57,13 @@ export default function TicketDetail() {
 
   async function withReload(fn) {
     await fn();
+    refreshCounts();
     const updated = await load();
     setModal(null);
     return updated;
   }
 
-  // Hành động không cần modal (Duyệt / Đồng ý huỷ / Từ chối huỷ / Huỷ yêu cầu khi Chờ duyệt)
+  // Hành động không cần modal (Duyệt / Đồng ý hủy / Từ chối hủy / Hủy yêu cầu khi Chờ duyệt)
   async function handleDirectAction(kind) {
     setActionError('');
     setActionBusy(true);
@@ -104,7 +107,7 @@ export default function TicketDetail() {
             {isBorrower ? ` bên giữ là ${ticket.holder}` : ` người mượn là ${ticket.borrower}`}
           </div>
 
-          <div className="card" style={{ overflow: 'hidden' }}>
+          <div className="card" style={{ overflowX: 'auto' }}>
             <table className="table">
               <thead><tr><th>Tài sản</th><th>SL</th><th>Hình thức</th></tr></thead>
               <tbody>{ticket.items.map((item) => (
@@ -116,22 +119,22 @@ export default function TicketDetail() {
           </div>
 
           <div style={{ font: '700 15px var(--font-display)' }}>Nhật ký</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 14, color: '#444' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 14, color: 'var(--ink-soft)' }}>
             {(ticket.log || []).map((line, i) => <div key={i}>{line}</div>)}
-            {ticket.status === 'APPROVED' && <div style={{ color: '#999' }}>chờ bạn xác nhận đã nhận</div>}
+            {ticket.status === 'APPROVED' && <div style={{ color: 'var(--muted)' }}>chờ bạn xác nhận đã nhận</div>}
           </div>
         </div>
 
         <div style={{ width: 320, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div className="card" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 14 }}>
-            <div style={{ font: '600 14px var(--font-display)', color: '#555' }}>Bên giữ</div>
+            <div style={{ font: '600 14px var(--font-display)', color: 'var(--ink-soft)' }}>Bên giữ</div>
             <div>{ticket.holder}</div>
-            <div style={{ font: '600 14px var(--font-display)', color: '#555', marginTop: 4 }}>Ngày trả</div>
+            <div style={{ font: '600 14px var(--font-display)', color: 'var(--ink-soft)', marginTop: 4 }}>Ngày trả</div>
             <div>{ticket.dueDate || 'Chuyển custodian — không có hạn'}</div>
           </div>
 
           <div className="card" style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ font: '600 14px var(--font-display)', color: '#555' }}>Việc của bạn</div>
+            <div style={{ font: '600 14px var(--font-display)', color: 'var(--ink-soft)' }}>Việc của bạn</div>
             <ActionPanel
               ticket={ticket}
               isBorrower={isBorrower}
@@ -176,12 +179,12 @@ export default function TicketDetail() {
       )}
       {modal === 'cancelRequest' && (
         <ReasonModal
-          title={`Gửi yêu cầu huỷ — ${ticket.id}`}
+          title={`Gửi yêu cầu hủy — ${ticket.id}`}
           subtitle={ticket.status === 'PENDING'
-            ? 'Ticket chưa duyệt sẽ được huỷ ngay.'
+            ? 'Ticket chưa duyệt sẽ được hủy ngay.'
             : 'Ticket đã được duyệt nên cần bên giữ đồng ý'}
           required
-          confirmLabel="Gửi yêu cầu huỷ"
+          confirmLabel="Gửi yêu cầu hủy"
           onCancel={() => setModal(null)}
           onSubmit={(reason) => withReload(() => ticketService.requestCancel(ticket.id, reason))}
         />
@@ -193,13 +196,13 @@ export default function TicketDetail() {
 function ActionPanel({ ticket, isBorrower, isHolder, onAction, busy }) {
   const labels = {
     receive: 'Xác nhận đã nhận',
-    cancelRequest: ticket.status === 'PENDING' ? 'Huỷ yêu cầu' : 'Gửi yêu cầu huỷ',
+    cancelRequest: ticket.status === 'PENDING' ? 'Hủy yêu cầu' : 'Gửi yêu cầu hủy',
     return: 'Đã trả',
     approve: 'Duyệt',
     reject: 'Từ chối',
     holderReceive: 'Xác nhận đã nhận lại',
-    cancelApprove: 'Đồng ý huỷ',
-    cancelReject: 'Từ chối huỷ',
+    cancelApprove: 'Đồng ý hủy',
+    cancelReject: 'Từ chối hủy',
   };
   const actions = getTicketActions(ticket, { isBorrower, isHolder });
   if (actions.length === 0) {

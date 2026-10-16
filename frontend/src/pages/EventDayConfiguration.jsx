@@ -96,8 +96,17 @@ export default function EventDayConfiguration() {
       .catch((err) => setError(err.message || 'Không tải được danh sách tài sản'));
   }, []);
 
+  // Không có mã trên URL (vd. bấm menu "Cấu hình sự kiện") = form trống để tạo ngày mới.
   useEffect(() => {
-    if (eventDayId) loadEvent(eventDayId);
+    if (eventDayId) {
+      loadEvent(eventDayId);
+      return;
+    }
+    setSavedEvent(null);
+    setDraft(emptyDraft());
+    setLookupId('');
+    setError('');
+    setSuccess('');
   }, [eventDayId, loadEvent]);
 
   function updateDraft(field, value) {
@@ -193,19 +202,16 @@ export default function EventDayConfiguration() {
     }
   }
 
-  function startNew() {
-    setSavedEvent(null);
-    setDraft(emptyDraft());
-    setLookupId('');
-    setError('');
-    setSuccess('');
-    navigate('/cau-hinh-su-kien');
-  }
+  // Nút lưu chỉ sáng khi mọi ô bắt buộc đã có giá trị; kiểm tra nghiệp vụ vẫn ở server.
+  const canSubmit = Boolean(assets) && draft.name.trim() && draft.eventDate && draft.shifts.every((shift) => (
+    shift.name.trim() && shift.startsAt && shift.endsAt && String(shift.shiftLeadUserId ?? '').trim()
+    && shift.assets.every((asset) => asset.assetId && asset.quotaQuantity !== '')
+  ));
 
   return (
     <Layout
       title="Cấu hình ngày sự kiện"
-      subtitle="Tạo lịch ca, phân công Trưởng ca và đặt quota tài sản"
+      subtitle="Tạo lịch ca, phân công Trưởng ca và đặt định mức tài sản"
     >
       <div className="notice-box">
         Event Mode chỉ lưu định mức vận hành, không thay đổi Total Quantity hoặc Available Quantity của tài sản.
@@ -213,23 +219,22 @@ export default function EventDayConfiguration() {
 
       <div className="event-lookup card">
         <div className="field event-lookup-input">
-          <label htmlFor="event-day-id">Mở cấu hình bằng Event Day ID</label>
+          <label htmlFor="event-day-id">Mã ngày sự kiện</label>
           <input
             id="event-day-id"
             value={lookupId}
             onChange={(event) => setLookupId(event.target.value)}
-            placeholder="UUID của ngày sự kiện"
+            placeholder="Dán mã ngày sự kiện để mở lại"
           />
         </div>
         <button
-          className="btn outline"
+          className="btn primary"
           type="button"
           disabled={!lookupId.trim() || loading}
           onClick={() => navigate(`/cau-hinh-su-kien/${lookupId.trim()}`)}
         >
-          {loading ? 'Đang tải…' : 'Mở'}
+          {loading ? 'Đang tải…' : 'Mở cấu hình'}
         </button>
-        <button className="btn link" type="button" onClick={startNew}>Tạo mới</button>
       </div>
 
       {error && <div className="page-error">{error}</div>}
@@ -292,15 +297,15 @@ export default function EventDayConfiguration() {
                   <input type="datetime-local" required value={shift.endsAt} onChange={(event) => updateShift(shiftIndex, 'endsAt', event.target.value)} />
                 </div>
                 <div className="field">
-                  <label>ID tài khoản Trưởng ca</label>
-                  <input required value={shift.shiftLeadUserId} onChange={(event) => updateShift(shiftIndex, 'shiftLeadUserId', event.target.value)} placeholder="UUID có role SHIFT_LEAD" />
+                  <label>Mã tài khoản Trưởng ca</label>
+                  <input required value={shift.shiftLeadUserId} onChange={(event) => updateShift(shiftIndex, 'shiftLeadUserId', event.target.value)} placeholder="Mã tài khoản có vai Trưởng ca" />
                 </div>
               </div>
 
               <div className="event-assets-header">
                 <div>
-                  <strong>Quota tài sản</strong>
-                  <div className="hint">Carry-over do hệ thống tính khi vận hành ca, không cấu hình tại đây.</div>
+                  <strong>Định mức tài sản</strong>
+                  <div className="hint">Tồn chuyển ca do hệ thống tự tính khi vận hành ca, không cấu hình tại đây.</div>
                 </div>
                 <button className="btn small outline" type="button" onClick={() => addAsset(shiftIndex)}>Thêm tài sản</button>
               </div>
@@ -318,7 +323,7 @@ export default function EventDayConfiguration() {
                       </select>
                     </div>
                     <div className="field">
-                      <label>Quota</label>
+                      <label>Định mức</label>
                       <input type="number" min="0" step="1" required value={asset.quotaQuantity} onChange={(event) => updateAsset(shiftIndex, assetIndex, 'quotaQuantity', event.target.value)} />
                     </div>
                     <button className="btn small danger-outline" type="button" disabled={shift.assets.length === 1} onClick={() => removeAsset(shiftIndex, assetIndex)}>Xóa</button>
@@ -330,7 +335,7 @@ export default function EventDayConfiguration() {
 
           <div className="event-form-actions">
             <button className="btn outline" type="button" onClick={addShift}>Thêm ca</button>
-            <button className="btn primary" type="submit" disabled={submitting || !assets}>
+            <button className="btn primary" type="submit" disabled={submitting || !canSubmit}>
               {submitting ? 'Đang lưu…' : savedEvent ? 'Cập nhật cấu hình' : 'Tạo ngày sự kiện'}
             </button>
           </div>

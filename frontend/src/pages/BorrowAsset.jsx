@@ -145,12 +145,12 @@ export default function BorrowAsset() {
     return (
       <Layout title="Mượn tài sản">
         <div className="card" style={{ maxWidth: 560, padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ font: '700 22px var(--font-display)', color: '#2f7d32' }}>
+          <div style={{ font: '700 22px var(--font-display)', color: 'var(--green)' }}>
             Đã tạo {result.createdTickets.length} Ticket
           </div>
           <div className="hint" style={{ marginTop: -6 }}>Mỗi người giữ nhận một thông báo cần duyệt</div>
           {result.createdTickets.map((t) => (
-            <div key={t.id} className="flex-row" style={{ border: '1.5px solid #2a2a2a', borderRadius: 6, padding: '8px 11px', fontSize: 14 }}>
+            <div key={t.id} className="flex-row" style={{ border: '1.5px solid var(--line-strong)', borderRadius: 'var(--radius-md)', padding: '8px 11px', fontSize: 14 }}>
               <span className="flex-1">{t.id}</span>
               <span className="badge">Chờ duyệt</span>
             </div>
@@ -172,24 +172,20 @@ export default function BorrowAsset() {
 
   return (
     <Layout title="Mượn tài sản">
-      <div className="hint">
-        Tick tài sản ở đầu dòng, phần khai chi tiết sổ ra ngay dưới dòng đó. Không có modal, không có bước riêng.
-      </div>
-
       <div className="flex-row wrap">
         <div className="field">
           <label>Tìm tài sản</label>
           <input placeholder="Nhập tên tài sản..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: 240 }} />
         </div>
         <div className="field">
-          <label>Category ID</label>
+          <label>Mã danh mục</label>
           <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={{ width: 220 }}>
             <option value="">Tất cả</option>
             {categoryIds.map((id) => <option key={id} value={id}>{id}</option>)}
           </select>
         </div>
         <div className="field">
-          <label>Responsible Team ID</label>
+          <label>Mã ban phụ trách</label>
           <select value={teamId} onChange={(e) => setTeamId(e.target.value)} style={{ width: 220 }}>
             <option value="">Tất cả</option>
             {teamIds.map((id) => <option key={id} value={id}>{id}</option>)}
@@ -199,7 +195,7 @@ export default function BorrowAsset() {
 
       {error && <div className="page-error">{error}</div>}
 
-      <div className="card" style={{ overflow: 'hidden' }}>
+      <div className="card" style={{ overflowX: 'auto' }}>
         <table className="table">
           <thead>
             <tr>
@@ -270,8 +266,8 @@ function FragmentRow({ asset, disabled, sel, rowValid, checkedCount, checkedPeop
         </td>
         <td style={sel?.expanded ? { fontWeight: 600 } : undefined}>{asset.name}</td>
         <td>{asset.categoryId}</td>
-        <td style={disabled ? { color: '#c0392b' } : undefined}>{disabled ? '0 — hết' : asset.availableQuantity}</td>
-        <td style={{ color: checkedPeople ? undefined : '#bbb' }}>
+        <td style={disabled ? { color: 'var(--red)' } : undefined}>{disabled ? '0 — hết' : asset.availableQuantity}</td>
+        <td style={{ color: checkedPeople ? undefined : 'var(--muted)' }}>
           {checkedPeople ? `${checkedCount} · ${checkedPeople} người giữ` : disabled ? 'checkbox disable' : '—'}
         </td>
         <td>
@@ -282,10 +278,10 @@ function FragmentRow({ asset, disabled, sel, rowValid, checkedCount, checkedPeop
         <tr className="alt">
           <td colSpan={6} style={{ padding: '4px 12px 13px 56px' }}>
             {asset.eligibleCustodies.length === 0 ? (
-              <div className="hint" style={{ color: '#c0392b' }}>Chưa có người đang giữ tài sản này để mượn.</div>
+              <div className="hint" style={{ color: 'var(--red)' }}>Chưa có người đang giữ tài sản này để mượn.</div>
             ) : (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1.6fr .8fr 1.3fr 1.3fr', gap: 8, font: '600 12px var(--font-display)', color: '#666', borderBottom: '1px solid #ddd', paddingBottom: 4 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.6fr .8fr 1.3fr 1.3fr', gap: 8, font: '600 12px var(--font-display)', color: 'var(--muted)', borderBottom: '1px solid var(--line-strong)', paddingBottom: 4 }}>
                   <div>Người giữ</div><div>SL mượn</div><div>Hình thức</div><div>Ngày trả</div>
                 </div>
                 {asset.eligibleCustodies.map((custody) => {
@@ -300,7 +296,7 @@ function FragmentRow({ asset, disabled, sel, rowValid, checkedCount, checkedPeop
                       />
                       <div title={custody.sourceCustodyId}>
                         Custody {custody.sourceCustodyId.slice(0, 8)}
-                        <span style={{ color: '#888' }}> (cho mượn {custody.lendableQuantity})</span>
+                        <span style={{ color: 'var(--muted)' }}> (cho mượn {custody.lendableQuantity})</span>
                       </div>
                       <input
                         type="number"
@@ -309,28 +305,25 @@ function FragmentRow({ asset, disabled, sel, rowValid, checkedCount, checkedPeop
                         value={row.qty}
                         disabled={!row.checked}
                         onChange={(e) => onQtyChange(custody, e.target.value)}
-                        style={{ height: 30, border: '1.5px solid #2a2a2a', borderRadius: 5, padding: '0 8px', width: '100%' }}
+                        style={{ width: '100%' }}
                       />
                       <select
                         value={row.method}
                         disabled={!row.checked}
                         onChange={(e) => onRowChange(custody.sourceCustodyId, { method: e.target.value })}
-                        style={{ height: 30, border: '1.5px solid #2a2a2a', borderRadius: 5 }}
                       >
                         {METHODS.map((method) => (
                           <option key={method.value} value={method.value}>{method.label}</option>
                         ))}
                       </select>
                       {row.method === 'CUSTODY_TRANSFER' ? (
-                        <div className="hint" style={{ color: '#888' }}>ẩn ô ngày trả</div>
+                        <div className="hint" style={{ color: 'var(--muted)' }}>ẩn ô ngày trả</div>
                       ) : (
                         <input
                           type="date"
                           value={row.dueDate}
                           disabled={!row.checked}
-                          onChange={(e) => onRowChange(custody.sourceCustodyId, { dueDate: e.target.value })}
-                          style={{ height: 30, border: '1.5px solid #2a2a2a', borderRadius: 5, padding: '0 8px' }}
-                        />
+                          onChange={(e) => onRowChange(custody.sourceCustodyId, { dueDate: e.target.value })}                        />
                       )}
                     </div>
                   );
@@ -338,8 +331,8 @@ function FragmentRow({ asset, disabled, sel, rowValid, checkedCount, checkedPeop
               </>
             )}
             {!rowValid && Object.values(sel.rows).some((r) => r.checked) && (
-              <div className="hint" style={{ color: '#8a6400', marginTop: 6 }}>
-                Đã tick tài sản nhưng còn thiếu SL / hình thức / ngày trả — nút Gửi yêu cầu vẫn disable.
+              <div className="hint" style={{ color: 'var(--gold)', marginTop: 6 }}>
+                Nhập đủ số lượng, hình thức và ngày trả để gửi yêu cầu.
               </div>
             )}
           </td>

@@ -101,14 +101,31 @@ export const dashboardService = {
    * }
    */
   async get() {
-    if (USE_MOCK) return mockApi.getDashboard();
+    if (USE_MOCK) return fetchDashboard();
     const [dashboard, assetPage] = await Promise.all([
-      http.get('/dashboard'),
+      fetchDashboard(),
       http.get('/assets', toAssetBrowseQuery({ pageSize: 100 })),
     ]);
     return mapMemberDashboard(dashboard, mapAssetPage(assetPage).items);
   },
+
+  /** GET /dashboard — chỉ số liệu + việc cần làm, không kèm danh sách tài sản (dùng cho badge menu). */
+  async getStats() {
+    if (USE_MOCK) return fetchDashboard();
+    return mapMemberDashboard(await fetchDashboard());
+  },
 };
+
+// Trang Dashboard và badge menu thường cùng gọi /dashboard lúc mở trang: dùng chung request
+// đang chạy. Xong là bỏ ngay — không cache, lần gọi sau luôn lấy dữ liệu mới.
+let dashboardInflight = null;
+function fetchDashboard() {
+  if (!dashboardInflight) {
+    dashboardInflight = (USE_MOCK ? mockApi.getDashboard() : http.get('/dashboard'))
+      .finally(() => { dashboardInflight = null; });
+  }
+  return dashboardInflight;
+}
 
 export const assetService = {
   /**
@@ -304,6 +321,26 @@ export const hrService = {
     return mapTransactionPage(data);
   },
 
+};
+
+export const memberService = {
+  /**
+   * GET /hr/members?page=&page_size=
+   * response: { items: [{ id, username, email, name, roles, isActive }], page, pageSize, total }
+   */
+  async list() {
+    return USE_MOCK ? mockApiExt.listMembers() : http.get('/hr/members', { page_size: 100 });
+  },
+
+  /**
+   * PUT /hr/members/:id/roles  body: { roles: [...] } — thay toàn bộ vai.
+   * 403 ROLE_ASSIGNMENT_FORBIDDEN: tự sửa vai mình, hoặc HR đụng tới vai HR/SYSTEM_ADMIN.
+   */
+  async replaceRoles(memberId, roles) {
+    return USE_MOCK
+      ? mockApiExt.replaceMemberRoles(memberId, roles)
+      : http.put(`/hr/members/${memberId}/roles`, { roles });
+  },
 };
 
 export const reconciliationService = {

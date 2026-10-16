@@ -12,9 +12,31 @@ const delay = (ms = 350) => new Promise((res) => setTimeout(res, ms));
 
 let currentUser = null;
 
+// roles dùng đúng mã vai của backend (OperationalRole); MEMBER là ngầm định.
 const users = {
-  'baotran': { username: 'baotran', password: '123456', id: 'u1', name: 'Bảo Trân', department: 'Ban Hậu cần' },
+  'baotran': { username: 'baotran', password: '123456', id: 'u1', name: 'Bảo Trân', roles: ['HR', 'SHIFT_LEAD', 'TEAM_LEAD_ASSET'] },
+  'admin': { username: 'admin', password: '123456', id: 'u0', name: 'Quản trị viên', roles: ['SYSTEM_ADMIN'] },
+  'minhanh': { username: 'minhanh', password: '123456', id: 'p1', name: 'Minh Anh', roles: [] },
+  'thuha': { username: 'thuha', password: '123456', id: 'p2', name: 'Thu Hà', roles: ['SHIFT_LEAD'] },
+  'quochuy': { username: 'quochuy', password: '123456', id: 'p3', name: 'Quốc Huy', roles: ['TEAM_HEAD'] },
 };
+
+const ELEVATED_ROLES = ['SYSTEM_ADMIN', 'HR'];
+
+function publicUser(u) {
+  return { id: u.id, name: u.name, username: u.username, roles: [...u.roles] };
+}
+
+// Id người đang đăng nhập — mọi dữ liệu 'của tôi' trong mock lọc theo id này.
+function meId() {
+  currentUser = currentUser || userFromToken();
+  return currentUser?.id;
+}
+
+function userFromToken() {
+  const id = localStorage.getItem('clb_assets_token')?.replace('mock-token-', '');
+  return Object.values(users).find((u) => u.id === id) || null;
+}
 
 let assets = [
   { id: 'a1', name: 'Loa Bluetooth JBL', type: 'Thiết bị', total: 6, available: 4, department: 'Ban Sự kiện' },
@@ -130,7 +152,7 @@ let tickets = [
     dueDate: '2026-08-27',
     cancelReason: 'sự kiện đổi ngày',
     method: 'Mượn tạm',
-    log: ['22/08 — Tuấn Kiệt xin huỷ: "sự kiện đổi ngày"'],
+    log: ['22/08 — Tuấn Kiệt xin hủy: "sự kiện đổi ngày"'],
   },
   {
     id: 'TK-0140',
@@ -148,9 +170,9 @@ let tickets = [
 ];
 
 let heldAssets = [
-  { id: 'ha1', name: 'Loa Bluetooth JBL', holding: 3, lent: 2, status: 'CONFIRMED' },
-  { id: 'ha2', name: 'Standee A1 (HR mới gán)', holding: 2, lent: 0, status: 'PENDING_CONFIRM' },
-  { id: 'ha3', name: 'Dây nối 10m', holding: 5, lent: 3, status: 'CONFIRM_OVERDUE' },
+  { id: 'ha1', ownerId: 'u1', name: 'Loa Bluetooth JBL', holding: 3, lent: 2, status: 'CONFIRMED' },
+  { id: 'ha2', ownerId: 'u1', name: 'Standee A1 (HR mới gán)', holding: 2, lent: 0, status: 'PENDING_CONFIRM' },
+  { id: 'ha3', ownerId: 'u1', name: 'Dây nối 10m', holding: 5, lent: 3, status: 'CONFIRM_OVERDUE' },
 ];
 
 let notifications = [
@@ -202,7 +224,7 @@ let notifications = [
   {
     id: 'n6',
     type: 'cancel_rejected',
-    title: 'Yêu cầu huỷ bị từ chối',
+    title: 'Yêu cầu hủy bị từ chối',
     detail: 'TK-0138 · lý do: đã chuẩn bị tài sản',
     time: '23/08',
     unread: false,
@@ -228,44 +250,47 @@ export const mockApi = {
       throw err;
     }
     currentUser = u;
-    return { token: 'mock-token-' + u.id, user: { id: u.id, name: u.name, username: u.username, role: 'MEMBER', department: u.department } };
+    return { token: 'mock-token-' + u.id, user: publicUser(u) };
   },
 
   async me() {
     await delay(150);
-    if (!currentUser) currentUser = users['baotran'];
-    return { id: currentUser.id, name: currentUser.name, username: currentUser.username, role: 'MEMBER', department: currentUser.department };
+    currentUser = currentUser || userFromToken();
+    if (!currentUser) throw { status: 401, message: 'Phiên đăng nhập đã hết hạn' };
+    return publicUser(currentUser);
   },
 
   async getDashboard() {
     await delay();
-    const myBorrow = tickets.filter((t) => t.borrowerId === 'u1' && ['ACTIVE', 'APPROVED', 'AWAITING_HOLDER_CONFIRM'].includes(t.status));
+    const me = meId();
+    const myHeld = heldAssets.filter((a) => a.ownerId === me);
+    const myBorrow = tickets.filter((t) => t.borrowerId === me && ['ACTIVE', 'APPROVED', 'AWAITING_HOLDER_CONFIRM'].includes(t.status));
     const overdueCount = myBorrow.filter((t) => t.overdue).length;
-    const pendingApproval = tickets.filter((t) => t.holderId === 'u1' && t.status === 'PENDING').length;
-    const awaitingMyReceive = tickets.filter((t) => t.holderId === 'u1' && t.status === 'AWAITING_HOLDER_CONFIRM').length;
-    const heldTotal = heldAssets.reduce((s, a) => s + a.holding, 0);
-    const pendingConfirm = heldAssets.filter((a) => a.status !== 'CONFIRMED').length;
+    const pendingApproval = tickets.filter((t) => t.holderId === me && t.status === 'PENDING').length;
+    const awaitingMyReceive = tickets.filter((t) => t.holderId === me && t.status === 'AWAITING_HOLDER_CONFIRM').length;
+    const heldTotal = myHeld.reduce((s, a) => s + a.holding, 0);
+    const pendingConfirm = myHeld.filter((a) => a.status !== 'CONFIRMED').length;
 
     const todos = [];
     tickets.forEach((t) => {
-      if (t.overdue && t.borrowerId === 'u1') {
+      if (t.overdue && t.borrowerId === me) {
         todos.push({ id: t.id, kind: 'overdue', label: 'Quá hạn', text: `${t.id} · ${t.asset} x1 · bạn mượn của ${t.holder}, hạn ${fmtShort(t.dueDate)}`, action: 'Đã trả', ticketId: t.id });
       }
-      if (t.status === 'PENDING' && t.holderId === 'u1') {
+      if (t.status === 'PENDING' && t.holderId === me) {
         todos.push({ id: t.id, kind: 'pending', label: 'Chờ duyệt', text: `${t.id} · ${t.asset} · ${t.borrower} xin mượn của bạn`, action: 'approve_reject', ticketId: t.id });
       }
-      if (t.status === 'AWAITING_HOLDER_CONFIRM' && t.holderId === 'u1') {
+      if (t.status === 'AWAITING_HOLDER_CONFIRM' && t.holderId === me) {
         todos.push({ id: t.id, kind: 'await_receive', label: 'Chờ nhận lại', text: `${t.id} · ${t.asset} · ${t.borrower} đã bấm "Đã trả", kèm ${t.returnPhotos || 0} ảnh`, action: 'Nhận lại', ticketId: t.id });
       }
     });
-    heldAssets.forEach((a) => {
+    myHeld.forEach((a) => {
       if (a.status !== 'CONFIRMED') {
-        todos.push({ id: a.id, kind: 'confirm', label: 'Quá 24h', text: `${a.name} · HR gán cho bạn giữ, chưa xác nhận`, action: 'Xác nhận', ticketId: null });
+        todos.push({ id: a.id, kind: 'confirm', label: a.status === 'CONFIRM_OVERDUE' ? 'Quá 24h' : 'Chờ xác nhận', text: `${a.name} · HR gán cho bạn giữ, chưa xác nhận`, action: 'Xác nhận', ticketId: null });
       }
     });
 
     return {
-      userName: currentUser?.name || 'Bảo Trân',
+      userName: currentUser?.name,
       stats: {
         myBorrowCount: myBorrow.length,
         overdueCount,
@@ -301,8 +326,8 @@ export const mockApi = {
           id,
           asset: `${asset?.name || item.assetId} x${alloc.quantity}`,
           qty: alloc.quantity,
-          borrower: currentUser?.name || 'Bảo Trân',
-          borrowerId: 'u1',
+          borrower: currentUser?.name,
+          borrowerId: meId(),
           holder: `Custody ${alloc.sourceCustodyId}`,
           holderId: alloc.sourceCustodyId,
           status: 'PENDING',
@@ -319,9 +344,10 @@ export const mockApi = {
 
   async listTickets({ role, status, search } = {}) {
     await delay(300);
+    const me = meId();
     let list = tickets;
-    if (role === 'borrower') list = list.filter((t) => t.borrowerId === 'u1');
-    if (role === 'holder') list = list.filter((t) => t.holderId === 'u1');
+    if (role === 'borrower') list = list.filter((t) => t.borrowerId === me);
+    if (role === 'holder') list = list.filter((t) => t.holderId === me);
     if (status) list = list.filter((t) => t.status === status);
     if (search) list = list.filter((t) => t.asset.toLowerCase().includes(search.toLowerCase()));
     return { tickets: list };
@@ -379,7 +405,7 @@ export const mockApi = {
     const t = findTicket(id);
     t.status = 'CANCEL_REQUESTED';
     t.cancelReason = reason;
-    t.log.push(`${fmtNow()} — Bạn gửi yêu cầu huỷ: "${reason || '(không có lý do)'}"`);
+    t.log.push(`${fmtNow()} — Bạn gửi yêu cầu hủy: "${reason || '(không có lý do)'}"`);
     return { ...t };
   },
 
@@ -387,18 +413,18 @@ export const mockApi = {
     await delay(300);
     const t = findTicket(id);
     t.status = approve ? 'CANCELLED' : t.prevStatus || 'ACTIVE';
-    t.log.push(`${fmtNow()} — ${approve ? 'Bạn đồng ý huỷ' : 'Bạn từ chối huỷ'}`);
+    t.log.push(`${fmtNow()} — ${approve ? 'Bạn đồng ý hủy' : 'Bạn từ chối hủy'}`);
     return { ...t };
   },
 
   async listHeldAssets() {
     await delay(300);
-    return { assets: heldAssets };
+    return { assets: heldAssets.filter((a) => a.ownerId === meId()) };
   },
 
   async confirmHeldAsset(id, { photos, note }) {
     await delay(350);
-    const a = heldAssets.find((x) => x.id === id);
+    const a = heldAssets.find((x) => x.id === id && x.ownerId === meId());
     if (a) a.status = 'CONFIRMED';
     return { asset: a };
   },
@@ -520,6 +546,32 @@ function mockShiftResponse(shift) {
 }
 
 export const mockApiExt = {
+  // ---------------- Phân quyền (bám RoleAdministrationPolicy ở backend) ----------------
+  async listMembers() {
+    await delay(250);
+    const items = Object.values(users)
+      .map((u) => ({ ...publicUser(u), email: `${u.username}@example.test`, isActive: true }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+    return { items, page: 1, pageSize: items.length, total: items.length };
+  },
+
+  async replaceMemberRoles(memberId, roles) {
+    await delay(300);
+    const actor = currentUser || userFromToken();
+    const target = Object.values(users).find((u) => u.id === memberId);
+    if (!target) throw { status: 404, message: 'Không tìm thấy thành viên' };
+    const forbidden = (message) => ({ status: 403, message });
+    if (actor?.id === memberId) throw forbidden('Không thể tự sửa vai của chính mình.');
+    if (!actor?.roles.includes('SYSTEM_ADMIN')) {
+      const touchesElevated = [...target.roles, ...roles].some((r) => ELEVATED_ROLES.includes(r));
+      if (!actor?.roles.includes('HR') || touchesElevated) {
+        throw forbidden('Chỉ Quản trị mới được gán hoặc gỡ vai HR / Quản trị.');
+      }
+    }
+    target.roles = [...roles];
+    return { ...publicUser(target), email: `${target.username}@example.test`, isActive: true };
+  },
+
   // ---------------- HR dashboard ----------------
   async getHrDashboard() {
     await delay();
@@ -533,13 +585,13 @@ export const mockApiExt = {
       { id: 'hd1', kind: 'overdue24h', label: 'Quá 24h', text: 'Minh Anh chưa xác nhận Dây nối 10m ×5 — gán từ 23/08', action: 'Nhắc lại' },
       { id: 'hd2', kind: 'reconciliation', label: 'Đối soát', text: `${reconciliationBatch.id} · còn ${reconciliationBatch.rows.filter((r) => r.result !== 'MATCH').length + 1} Custodian chưa đóng xác nhận`, action: 'Xem đợt' },
       { id: 'hd3', kind: 'mismatch', label: 'Lệch', text: '3 dòng khai sai lệch cần xử lý ngoài hệ thống', action: 'Chi tiết' },
-      { id: 'hd4', kind: 'transfer', label: 'Transfer', text: '2 yêu cầu chuyển quyền giữ đang chờ bên nhận xác nhận', action: 'Theo dõi' },
+      { id: 'hd4', kind: 'transfer', label: 'Chuyển quyền giữ', text: '2 yêu cầu chuyển quyền giữ đang chờ bên nhận xác nhận', action: 'Theo dõi' },
     ];
 
     return {
       stats: {
         totalAssets,
-        totalTypes: new Set(assets.map((a) => a.type)).size,
+        totalTypes: assets.length, // khớp backend: mỗi Asset là một mặt hàng có số lượng
         onLoan,
         onLoanOverdue,
         awaitingCustodian,
@@ -624,7 +676,7 @@ export const mockApiExt = {
       r.result === 'MATCH' || r.result === 'RESOLVED'
     ));
     if (!allDone) {
-      const err = new Error('Chưa đủ 100% Custodian đóng xác nhận, không thể đóng đợt.');
+      const err = new Error('Chưa đủ 100% người giữ xác nhận, không thể đóng đợt.');
       err.status = 409;
       throw err;
     }
@@ -650,11 +702,11 @@ export const mockApiExt = {
       id: `TRF-${String(transferSequence++).padStart(4, '0')}`,
       sourceCustodyId: input.sourceCustodyId,
       assetId: `asset-${input.sourceCustodyId}`,
-      currentCustodianUserId: currentUser?.id || 'u1',
+      currentCustodianUserId: meId(),
       targetCustodianUserId: input.targetUserId,
       quantity: input.quantity,
       conditionSnapshot: 'GOOD',
-      createdByUserId: currentUser?.id || 'u1',
+      createdByUserId: meId(),
       createdAt: now,
       reconciliationItemId,
       status: 'PENDING_BOTH_CONFIRMATIONS',
@@ -678,7 +730,7 @@ export const mockApiExt = {
   async confirmTransfer(id, side) {
     await delay(250);
     const transfer = custodyTransfers.find((candidate) => candidate.id === id);
-    if (!transfer) throw new Error('Transfer không tồn tại.');
+    if (!transfer) throw new Error('Yêu cầu chuyển không tồn tại.');
     const field = side === 'current' ? 'currentConfirmedAt' : 'targetConfirmedAt';
     if (transfer[field]) throw new Error('Phía này đã xác nhận.');
     transfer[field] = new Date().toISOString();
@@ -728,7 +780,7 @@ export const mockApiExt = {
     handoverRecord = {
       id: 'HANDOVER-0001', termId, termCode: '2025-2026', termName: 'Nhiệm kỳ 2025-2026',
       termStartsOn: '2025-09-01', termEndsOn: '2026-08-31', oldHrUserId: 'u1',
-      newHrUserId: 'p2', createdByUserId: currentUser?.id || 'u1', createdAt: now,
+      newHrUserId: 'p2', createdByUserId: meId(), createdAt: now,
       status: 'PENDING_CONFIRMATIONS', oldConfirmedAt: null, newConfirmedAt: null,
       lockedAt: null,
       items: assets.map((asset, index) => ({

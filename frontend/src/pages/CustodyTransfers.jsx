@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Layout from '../components/Layout';
 import { transferService } from '../api/services';
-import { useAuth } from '../context/AuthContext';
-import { ROLES, useRole } from '../context/RoleContext';
+import { hasRole, useAuth } from '../context/AuthContext';
 
 const STATUS_LABELS = {
   PENDING_BOTH_CONFIRMATIONS: 'Chờ hai bên',
@@ -13,7 +12,6 @@ const STATUS_LABELS = {
 
 export default function CustodyTransfers() {
   const { user } = useAuth();
-  const { role } = useRole();
   const [items, setItems] = useState([]);
   const [sourceCustodyId, setSourceCustodyId] = useState('');
   const [targetUserId, setTargetUserId] = useState('');
@@ -30,7 +28,7 @@ export default function CustodyTransfers() {
       const page = await transferService.list();
       setItems(page.items);
     } catch (err) {
-      setError(err.message || 'Không tải được danh sách Transfer.');
+      setError(err.message || 'Không tải được danh sách yêu cầu chuyển.');
     }
   }, []);
 
@@ -47,7 +45,7 @@ export default function CustodyTransfers() {
       setQuantity(1);
       await load();
     } catch (err) {
-      setError(err.message || 'Không thể tạo Transfer.');
+      setError(err.message || 'Không thể tạo yêu cầu chuyển.');
     } finally {
       setBusy(false);
     }
@@ -65,11 +63,13 @@ export default function CustodyTransfers() {
       setPhotos([]);
       await load();
     } catch (err) {
-      setError(err.message || 'Không thể xác nhận Transfer.');
+      setError(err.message || 'Không thể xác nhận yêu cầu chuyển.');
     } finally {
       setBusy(false);
     }
   }
+
+  const canCreate = sourceCustodyId.trim() && targetUserId.trim() && Number(quantity) >= 1;
 
   function availableSide(transfer) {
     if (transfer.status === 'COMPLETED') return null;
@@ -79,36 +79,36 @@ export default function CustodyTransfers() {
   }
 
   return (
-    <Layout title="Custody Transfer" subtitle="Custody chỉ đổi sau khi người đang giữ và người nhận đều xác nhận.">
+    <Layout title="Chuyển quyền giữ" subtitle="Quyền giữ chỉ được chuyển sau khi người đang giữ và người nhận đều xác nhận.">
       {error && <div className="error-box">{error}</div>}
 
-      {role === ROLES.HR && (
+      {hasRole(user, 'HR') && (
         <form className="card" onSubmit={create} style={{ padding: 18, display: 'grid', gap: 12 }}>
-          <strong>Tạo Transfer độc lập</strong>
-          <div className="flex-row wrap">
-            <label className="field flex-1">Source Custody ID
+          <strong>Tạo yêu cầu chuyển quyền giữ</strong>
+          <div className="field-row">
+            <label className="field flex-1">Mã quyền giữ nguồn
               <input required value={sourceCustodyId} onChange={(event) => setSourceCustodyId(event.target.value)} />
             </label>
-            <label className="field flex-1">Target User ID
+            <label className="field flex-1">Mã tài khoản người nhận
               <input required value={targetUserId} onChange={(event) => setTargetUserId(event.target.value)} />
             </label>
             <label className="field">Số lượng
               <input required type="number" min="1" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
             </label>
-            <button className="btn primary" disabled={busy}>Tạo yêu cầu</button>
+            <button className="btn primary" disabled={busy || !canCreate}>Tạo yêu cầu</button>
           </div>
         </form>
       )}
 
-      <div className="card" style={{ overflow: 'hidden' }}>
+      <div className="card" style={{ overflowX: 'auto' }}>
         <table className="table">
-          <thead><tr><th>Transfer</th><th>Custody nguồn</th><th>Người nhận</th><th>SL</th><th>Xác nhận</th><th>Trạng thái</th><th /></tr></thead>
+          <thead><tr><th>Yêu cầu</th><th>Bên giao</th><th>Người nhận</th><th>SL</th><th>Xác nhận</th><th>Trạng thái</th><th /></tr></thead>
           <tbody>
             {items.map((transfer) => {
               const side = availableSide(transfer);
               return (
                 <tr key={transfer.id}>
-                  <td><strong>{transfer.id}</strong>{transfer.reconciliationItemId && <div className="hint">Recon: {transfer.reconciliationItemId}</div>}</td>
+                  <td><strong>{transfer.id}</strong>{transfer.reconciliationItemId && <div className="hint">Đối soát: {transfer.reconciliationItemId}</div>}</td>
                   <td className="hint">{transfer.sourceCustodyId}<div>{transfer.currentCustodianUserId}</div></td>
                   <td className="hint">{transfer.targetCustodianUserId}</td>
                   <td>{transfer.quantity}</td>
@@ -121,7 +121,7 @@ export default function CustodyTransfers() {
                 </tr>
               );
             })}
-            {items.length === 0 && <tr><td colSpan={7} className="hint">Không có Transfer nào.</td></tr>}
+            {items.length === 0 && <tr><td colSpan={7} className="hint">Chưa có yêu cầu chuyển nào.</td></tr>}
           </tbody>
         </table>
       </div>

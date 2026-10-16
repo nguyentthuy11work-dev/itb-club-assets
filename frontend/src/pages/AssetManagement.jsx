@@ -87,10 +87,10 @@ export default function AssetManagement() {
   }
 
   return (
-    <Layout title="Tài sản" subtitle="Ban phụ trách là một thuộc tính của tài sản, sửa ngay trên dòng — không có màn phân bổ riêng.">
+    <Layout title="Tài sản">
       {error && <div className="page-error">{error}</div>}
 
-      <div className="card" style={{ overflow: 'hidden' }}>
+      <div className="card" style={{ overflowX: 'auto' }}>
         <table className="table">
           <thead>
             <tr><th>Tài sản</th><th>Loại</th><th>SL</th><th>Khả dụng</th><th>Ban phụ trách</th><th>Người giữ</th></tr>
@@ -105,7 +105,7 @@ export default function AssetManagement() {
                 <td>
                   <input
                     defaultValue={a.responsibleTeamId || ''}
-                    placeholder="Team UUID hoặc để trống"
+                    placeholder="Mã ban phụ trách (có thể để trống)"
                     onBlur={(e) => handleResponsibleTeamChange(a.id, e.target.value.trim())}
                   />
                 </td>
@@ -132,10 +132,10 @@ export default function AssetManagement() {
             <input type="number" min={1} value={qty} onChange={(e) => setQty(e.target.value)} />
           </div>
           <div className="field" style={{ width: 200 }}>
-            <label>Responsible Team UUID</label>
+            <label>Mã ban phụ trách</label>
             <input
               value={responsibleTeamId}
-              placeholder="UUID hoặc để trống"
+              placeholder="Có thể để trống"
               onChange={(e) => setResponsibleTeamId(e.target.value)}
             />
           </div>
@@ -148,12 +148,12 @@ export default function AssetManagement() {
         </div>
 
         <div className="field">
-          <label>Phân bổ cho Custodian *</label>
+          <label>Phân bổ cho người giữ *</label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {allocations.map((row) => (
               <div key={row.id} className="flex-row">
                 <input
-                  placeholder="Tên Custodian"
+                  placeholder="Tên người giữ"
                   value={row.custodianName}
                   onChange={(e) => updateAllocationRow(row.id, { custodianName: e.target.value })}
                   style={{ flex: 2, border: '1px solid var(--border-strong)', borderRadius: 8, padding: '8px 10px' }}
@@ -173,7 +173,7 @@ export default function AssetManagement() {
             ))}
           </div>
           <div className="flex-row" style={{ marginTop: 4 }}>
-            <button type="button" className="btn link" onClick={addAllocationRow}>+ Thêm Custodian</button>
+            <button type="button" className="btn link" onClick={addAllocationRow}>+ Thêm người giữ</button>
             <span className="hint" style={{ color: allocatedQty === totalQty && totalQty > 0 ? 'var(--green)' : 'var(--muted)' }}>
               Tổng phân bổ phải bằng số lượng đã nhập · {allocatedQty}/{totalQty || 0}
             </span>
@@ -184,9 +184,9 @@ export default function AssetManagement() {
 
         <div className="flex-row">
           <button className="btn primary" disabled={!canSubmit || submitting} onClick={handleSubmit}>
-            {submitting ? 'Đang lưu...' : 'Lưu & gán Custodian'}
+            {submitting ? 'Đang lưu...' : 'Lưu & gán người giữ'}
           </button>
-          <span className="hint">Quyền giữ có hiệu lực ngay khi lưu; Custodian nhận thông báo xác nhận.</span>
+          <span className="hint">Quyền giữ có hiệu lực ngay khi lưu; người giữ sẽ nhận thông báo để xác nhận.</span>
         </div>
       </div>
     </Layout>

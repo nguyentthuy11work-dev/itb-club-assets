@@ -75,7 +75,7 @@ export default function TransactionHistory() {
 
       {error && <div className="page-error">{error}</div>}
 
-      <div className="card" style={{ overflow: 'hidden' }}>
+      <div className="card" style={{ overflowX: 'auto' }}>
         <table className="table">
           <thead>
             <tr><th>Thời gian</th><th>Loại</th><th>SL</th><th>Từ</th><th>Đến</th><th>Ticket</th></tr>
