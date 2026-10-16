@@ -25,6 +25,7 @@ from ams.application.evidence import EvidenceStorageService
 from ams.application.handovers import HandoverService
 from ams.application.health import IReadinessProbe
 from ams.application.idempotency import IdempotentCommandExecutor
+from ams.application.member_roles import MemberRoleService
 from ams.application.operational_queries import OperationalReadService
 from ams.application.reconciliations import ReconciliationService
 from ams.application.reliability import IClock
@@ -49,6 +50,7 @@ from ams.infrastructure.operational_read_persistence import (
     SqlAlchemyOperationalReadRepository,
 )
 from ams.infrastructure.persistence import (
+    SqlAlchemyMemberRoleRepository,
     SqlAlchemyRefreshSessionRepository,
     SqlAlchemyUserRepository,
 )
@@ -67,6 +69,7 @@ from ams.interface.api.dependencies import (
     CustodyConfirmationServiceFactory,
     EventDayServiceFactory,
     HandoverServiceFactory,
+    MemberRoleServiceFactory,
     OperationalReadServiceFactory,
     ReconciliationServiceFactory,
     ResponsibleTeamServiceFactory,
@@ -81,6 +84,7 @@ from ams.interface.api.errors import register_exception_handlers
 from ams.interface.api.event_routes import router as event_day_router
 from ams.interface.api.handover_routes import router as handover_router
 from ams.interface.api.health import router as health_router
+from ams.interface.api.member_routes import router as member_router
 from ams.interface.api.observability import RequestObservabilityMiddleware, configure_logging
 from ams.interface.api.operational_routes import router as operational_router
 from ams.interface.api.reconciliation_routes import router as reconciliation_router
@@ -405,6 +409,25 @@ class SqlAlchemyHandoverServiceFactory:
         )
 
 
+class SqlAlchemyMemberRoleServiceFactory:
+    """Own one transaction per member role request."""
+
+    def __init__(self, session_maker: async_sessionmaker[AsyncSession]) -> None:
+        self._session_maker = session_maker
+
+    @asynccontextmanager
+    async def __call__(self) -> AsyncIterator[MemberRoleService]:
+        """Commit successful requests and roll back rejected/failed requests."""
+
+        async with self._session_maker() as database_session:
+            try:
+                yield MemberRoleService(SqlAlchemyMemberRoleRepository(database_session))
+                await database_session.commit()
+            except Exception:
+                await database_session.rollback()
+                raise
+
+
 def create_app(
     session_service_factory: SessionServiceFactory | None = None,
     settings: ApiSettings | None = None,
@@ -425,6 +448,7 @@ def create_app(
     reconciliation_service_factory: ReconciliationServiceFactory | None = None,
     transfer_service_factory: TransferServiceFactory | None = None,
     handover_service_factory: HandoverServiceFactory | None = None,
+    member_role_service_factory: MemberRoleServiceFactory | None = None,
 ) -> FastAPI:
     """Create the API with explicit dependencies or environment-backed production wiring."""
 
@@ -487,16 +511,22 @@ def create_app(
         )
     if handover_service_factory is None and maker is not None:
         handover_service_factory = SqlAlchemyHandoverServiceFactory(maker)
+    if member_role_service_factory is None and maker is not None:
+        member_role_service_factory = SqlAlchemyMemberRoleServiceFactory(maker)
 
     resolved_origins = (
         cors_allowed_origins
         if cors_allowed_origins is not None
-        else resolved_settings.cors_allowed_origins if resolved_settings is not None else ()
+        else resolved_settings.cors_allowed_origins
+        if resolved_settings is not None
+        else ()
     )
     resolved_log_level = (
         log_level
         if log_level is not None
-        else resolved_settings.log_level if resolved_settings is not None else "INFO"
+        else resolved_settings.log_level
+        if resolved_settings is not None
+        else "INFO"
     )
     configure_logging(resolved_log_level)
 
@@ -535,6 +565,7 @@ def create_app(
     application.state.reconciliation_service_factory = reconciliation_service_factory
     application.state.transfer_service_factory = transfer_service_factory
     application.state.handover_service_factory = handover_service_factory
+    application.state.member_role_service_factory = member_role_service_factory
     application.include_router(auth_router, prefix="/api/v1")
     application.include_router(asset_router, prefix="/api/v1")
     application.include_router(asset_import_router, prefix="/api/v1")
@@ -548,6 +579,7 @@ def create_app(
     application.include_router(reconciliation_router, prefix="/api/v1")
     application.include_router(transfer_router, prefix="/api/v1")
     application.include_router(handover_router, prefix="/api/v1")
+    application.include_router(member_router, prefix="/api/v1")
     application.include_router(health_router)
     register_exception_handlers(application)
     application.add_middleware(

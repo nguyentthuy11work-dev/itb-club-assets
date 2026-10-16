@@ -16,6 +16,7 @@ from ams.application.authentication import SessionService
 from ams.application.custody_confirmation import CustodyConfirmationService
 from ams.application.event_days import EventDayService
 from ams.application.handovers import HandoverService
+from ams.application.member_roles import MemberRoleService
 from ams.application.operational_queries import OperationalReadService
 from ams.application.reconciliations import ReconciliationService
 from ams.application.responsible_team import ResponsibleTeamService
@@ -132,6 +133,13 @@ class HandoverServiceFactory(Protocol):
 
     def __call__(self) -> HandoverService:
         """Return a configured Handover service."""
+
+
+class MemberRoleServiceFactory(Protocol):
+    """Create one transaction-scoped member role service per request."""
+
+    def __call__(self) -> AbstractAsyncContextManager[MemberRoleService]:
+        """Return a context manager owning the request transaction."""
 
 
 BEARER_SCHEME = HTTPBearer(auto_error=False)
@@ -290,6 +298,16 @@ def get_handover_service(request: Request) -> HandoverService:
     if factory is None:
         raise RuntimeError("Handover service is not configured.")
     return factory()
+
+
+async def get_member_role_service(request: Request) -> AsyncIterator[MemberRoleService]:
+    """Yield a member role service while its transaction remains open."""
+
+    factory: MemberRoleServiceFactory | None = request.app.state.member_role_service_factory
+    if factory is None:
+        raise RuntimeError("Member role service is not configured.")
+    async with factory() as service:
+        yield service
 
 
 async def get_current_actor(

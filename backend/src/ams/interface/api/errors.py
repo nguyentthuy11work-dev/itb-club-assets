@@ -23,6 +23,7 @@ from ams.application.event_reminders import EventReminderError
 from ams.application.evidence import EvidenceValidationError
 from ams.application.health import ServiceUnavailableError
 from ams.application.idempotency import IdempotencyConflictError
+from ams.application.member_roles import MemberNotFoundError
 from ams.application.operational_queries import (
     InvalidTransactionRangeError,
     OperationalReadNotFoundError,
@@ -103,6 +104,7 @@ def register_exception_handlers(application: FastAPI) -> None:
 
     application.add_exception_handler(AuthenticationError, authentication_error_handler)
     application.add_exception_handler(AuthorizationError, authorization_error_handler)
+    application.add_exception_handler(MemberNotFoundError, member_not_found_error_handler)
     application.add_exception_handler(RequestValidationError, validation_error_handler)
     application.add_exception_handler(HTTPException, http_error_handler)
     application.add_exception_handler(ServiceUnavailableError, unavailable_error_handler)
@@ -234,7 +236,18 @@ async def authorization_error_handler(request: Request, exception: Exception) ->
 
     error = exception
     assert isinstance(error, AuthorizationError)
-    return error_response(request, 403, "AUTHORIZATION_DENIED", str(error))
+    code = getattr(error, "code", "AUTHORIZATION_DENIED")
+    return error_response(request, 403, code, str(error))
+
+
+async def member_not_found_error_handler(
+    request: Request, exception: Exception
+) -> JSONResponse:
+    """Map an unknown role-change target to not found."""
+
+    error = exception
+    assert isinstance(error, MemberNotFoundError)
+    return error_response(request, 404, error.code, str(error))
 
 
 async def validation_error_handler(request: Request, exception: Exception) -> JSONResponse:

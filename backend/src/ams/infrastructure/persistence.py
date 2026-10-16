@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ams.application.authentication import IRefreshSessionRepository, RefreshSession
+from ams.application.member_roles import IMemberRoleRepository, MemberSummary
 from ams.domain.authentication import LocalCredential, UserIdentity
 from ams.domain.identity import OperationalRole
 from ams.domain.repositories import IUserRepository
@@ -118,6 +119,105 @@ class SqlAlchemyUserRepository(IUserRepository):
             roles=roles,
             team_ids=team_ids,
             is_active=is_active,
+        )
+
+
+class SqlAlchemyMemberRoleRepository(IMemberRoleRepository):
+    """Read members and replace roles as append-only ``user_roles`` history."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    async def list_members(self, *, offset: int, limit: int) -> tuple[list[MemberSummary], int]:
+        """Return members with active roles, ordered by display name."""
+
+        total = (await self._session.execute(text("SELECT count(*) FROM users"))).scalar_one()
+        result = await self._session.execute(
+            text(
+                """
+                SELECT users.id, users.username, users.email, users.display_name,
+                       users.is_active,
+                       array_remove(array_agg(roles.code ORDER BY roles.code), NULL) AS roles
+                FROM users
+                LEFT JOIN user_roles
+                       ON user_roles.user_id = users.id AND user_roles.revoked_at IS NULL
+                LEFT JOIN roles ON roles.id = user_roles.role_id
+                GROUP BY users.id
+                ORDER BY lower(users.display_name), users.id
+                OFFSET :offset LIMIT :limit
+                """
+            ),
+            {"offset": offset, "limit": limit},
+        )
+        items = [
+            MemberSummary(
+                id=UUID(str(row["id"])),
+                username=str(row["username"]),
+                email=str(row["email"]),
+                display_name=str(row["display_name"]),
+                roles=frozenset(OperationalRole(str(code)) for code in row["roles"]),
+                is_active=bool(row["is_active"]),
+            )
+            for row in result.mappings()
+        ]
+        return items, int(total)
+
+    async def get_for_update(self, member_id: UUID) -> MemberSummary | None:
+        """Lock the member row, then load current roles."""
+
+        locked = await self._session.execute(
+            text("SELECT id FROM users WHERE id = :member_id FOR UPDATE"),
+            {"member_id": member_id},
+        )
+        if locked.scalar_one_or_none() is None:
+            return None
+        identity = await SqlAlchemyUserRepository(self._session).get_identity(member_id)
+        assert identity is not None
+        return MemberSummary(
+            id=identity.id,
+            username=identity.username,
+            email=identity.email,
+            display_name=identity.display_name,
+            roles=identity.roles,
+            is_active=identity.is_active,
+        )
+
+    async def replace_roles(
+        self, member_id: UUID, roles: frozenset[OperationalRole], granted_by: UUID
+    ) -> None:
+        """Close removed assignments and insert new ones; never delete history."""
+
+        codes = sorted(str(role) for role in roles)
+        await self._session.execute(
+            text(
+                """
+                UPDATE user_roles
+                SET revoked_at = CURRENT_TIMESTAMP, revoked_by_user_id = :actor_id
+                WHERE user_id = :member_id
+                  AND revoked_at IS NULL
+                  AND role_id IN (
+                      SELECT id FROM roles WHERE NOT (code = ANY(CAST(:codes AS varchar[])))
+                  )
+                """
+            ),
+            {"member_id": member_id, "actor_id": granted_by, "codes": codes},
+        )
+        await self._session.execute(
+            text(
+                """
+                INSERT INTO user_roles (user_id, role_id, granted_by_user_id)
+                SELECT :member_id, roles.id, :actor_id
+                FROM roles
+                WHERE roles.code = ANY(CAST(:codes AS varchar[]))
+                  AND NOT EXISTS (
+                      SELECT 1 FROM user_roles
+                      WHERE user_roles.user_id = :member_id
+                        AND user_roles.role_id = roles.id
+                        AND user_roles.revoked_at IS NULL
+                  )
+                """
+            ),
+            {"member_id": member_id, "actor_id": granted_by, "codes": codes},
         )
 
 
